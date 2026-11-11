@@ -1,27 +1,11 @@
 package com.gathercart.common;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import jakarta.persistence.MappedSuperclass;
 
-import java.time.LocalDateTime;
-
-@Getter
-@Setter
+/**
+ * Re-export of BaseEntity in common package for backward compatibility.
+ * Prefer using {@link com.gathercart.entity.BaseEntity} for entities.
+ */
 @MappedSuperclass
-public abstract class BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+public abstract class BaseEntity extends com.gathercart.entity.BaseEntity {
 }

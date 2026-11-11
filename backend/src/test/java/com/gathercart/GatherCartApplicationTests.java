@@ -7,7 +7,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import javax.sql.DataSource;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5432/test",
+    "spring.datasource.url=jdbc:postgresql://localhost:5432/postgres",
+    "spring.datasource.driver-class-name=org.postgresql.Driver",
     "spring.jpa.hibernate.ddl-auto=none"
 })
 class GatherCartApplicationTests {

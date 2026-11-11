@@ -2,7 +2,7 @@
 
 > **Status**: Approved (Phase 0) — Implement starting Phase 1.
 >
-> **Base URL**: `http://localhost:8080/api/v1`
+> **Base URL**: `http://localhost:8081/api/v1` (configured via `SERVER_PORT=8081`)
 >
 > **Content-Type**: `application/json`
 

@@ -20,11 +20,11 @@ public class HealthController {
         String dbStatus = "Not Connected";
         if (dataSource != null) {
             try (Connection conn = dataSource.getConnection()) {
-                if (conn.isValid(2)) {
-                    dbStatus = "Connected (Supabase PostgreSQL: " + conn.getMetaData().getDatabaseProductName() + ")";
+                if (conn.isValid(3)) {
+                    dbStatus = "Connected (Supabase PostgreSQL: " + conn.getMetaData().getDatabaseProductName() + " " + conn.getMetaData().getDatabaseProductVersion() + ")";
                 }
             } catch (Exception e) {
-                dbStatus = "Configured / Awaiting valid credentials (" + e.getMessage() + ")";
+                dbStatus = "Configured / Awaiting valid Supabase credentials (" + e.getMessage() + ")";
             }
         }
 
