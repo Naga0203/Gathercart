@@ -1,113 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Truck, Percent, Sparkles, ArrowRight, Check } from 'lucide-react';
-import { Badge, ProgressBar, CountdownTimer, PriceDisplay, Button, Card } from '../../components/common';
+import {
+  ShieldCheck,
+  Truck,
+  Percent,
+  Sparkles,
+  ArrowRight,
+  Search,
+  X,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  BadgeCheck,
+} from 'lucide-react';
+import {
+  Badge,
+  ProgressBar,
+  PriceDisplay,
+  Button,
+  Card,
+  Skeleton,
+  EmptyState,
+  Alert,
+} from '../../components/common';
+import { productService } from '../../services/productService';
+import { categoryService } from '../../services/categoryService';
+import type { ProductSummary, Category, ProductQueryParams } from '../../types/product';
+import type { PagedResponse } from '../../types/api';
 
 export const HomePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'ending_soon' | 'almost_there'>('all');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  // Category state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
-  const categories = [
-    { id: 'rice', label: 'Rice & Grains', icon: '🌾' },
-    { id: 'oil', label: 'Cold Pressed Oils', icon: '🫒' },
-    { id: 'dal', label: 'Pulses & Dals', icon: '🫘' },
-    { id: 'nuts', label: 'Dry Fruits', icon: '🥜' },
-  ];
+  // Search & Sort state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortOption, setSortOption] = useState<'id,desc' | 'price,asc' | 'price,desc' | 'name,asc' | 'newest,desc'>('id,desc');
 
-  // Reference mockup data aligned with Screen 1
-  const sampleOffers = [
-    {
-      id: 1,
-      name: 'Sona Masoori Raw Rice',
-      description: 'Aged 12 Months • Direct from Raichur Mills',
-      unitLabel: '10 kg bag',
-      price: 649,
-      mrp: 850,
-      current: 23,
-      target: 25,
-      status: 'OPEN',
-      endsIn: '18h 30m',
-      isUrgent: false,
-      contextMessage: 'Group goal almost reached! Fast locking',
-      image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80',
+  // Products pagination state
+  const [productsPage, setProductsPage] = useState<PagedResponse<ProductSummary>>({
+    content: [],
+    page: 0,
+    size: 12,
+    totalElements: 0,
+    totalPages: 0,
+    last: true,
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce search input by 350ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Load Categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        setCategories(data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Fetch Products
+  const fetchProducts = useCallback(
+    async (pageToLoad = 0) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const [sortBy, sortDir] = sortOption.split(',') as [string, 'asc' | 'desc'];
+        const params: ProductQueryParams = {
+          page: pageToLoad,
+          size: 12,
+          sortBy,
+          sortDir,
+        };
+
+        if (selectedCategoryId !== null) {
+          params.categoryId = selectedCategoryId;
+        }
+
+        if (debouncedSearch.trim()) {
+          params.search = debouncedSearch.trim();
+        }
+
+        const result = await productService.getProducts(params);
+        setProductsPage(result);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unable to connect to product service';
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    {
-      id: 2,
-      name: 'Cold Pressed Groundnut Oil',
-      description: 'Wood Churned (Mara Chekku) • Salem Mills',
-      unitLabel: '5 L tin can',
-      price: 990,
-      mrp: 1250,
-      current: 12,
-      target: 15,
-      status: 'OPEN',
-      endsIn: '55m',
-      isUrgent: true,
-      contextMessage: 'Batch expires at 2:00 PM today',
-      image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 3,
-      name: 'Kashmiri Walnuts (In Shell)',
-      description: 'Kashmir Valley Harvest • 2 kg jute sack',
-      unitLabel: '2 kg sack',
-      price: 1350,
-      mrp: 1800,
-      current: 9,
-      target: 12,
-      status: 'OPEN',
-      endsIn: '14h',
-      isUrgent: false,
-      userJoinedQty: 2,
-      contextMessage: 'You & 8 neighbours pledged',
-      image: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 4,
-      name: 'Desi Toor Dal (Unpolished)',
-      description: 'Organic Certified • Gulbarga Farmers Co.',
-      unitLabel: '5 kg pack',
-      price: 720,
-      mrp: 900,
-      current: 2,
-      target: 20,
-      status: 'OPEN',
-      endsIn: '2d 4h',
-      isUrgent: false,
-      contextMessage: 'Offer just opened today',
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 5,
-      name: 'A2 Gir Cow Bilona Ghee',
-      description: 'Traditional Curd Churned • Saurashtra Dairy',
-      unitLabel: '1 L glass jar',
-      price: 1850,
-      mrp: 2400,
-      current: 15,
-      target: 15,
-      status: 'CONFIRMED',
-      endsIn: 'Locked',
-      isUrgent: false,
-      contextMessage: 'Locked & dispatched for delivery',
-      image: 'https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      id: 6,
-      name: 'Alphonso Mango Pulp (Natural)',
-      description: 'Ratnagiri Co-op • No Added Sugar',
-      unitLabel: '6 × 850g tins',
-      price: 1190,
-      mrp: 1600,
-      current: 7,
-      target: 20,
-      status: 'OFFER_ENDED',
-      endsIn: 'Closed',
-      isUrgent: false,
-      contextMessage: 'No money was charged to anyone',
-      image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=600&q=80',
-    },
-  ];
+    [selectedCategoryId, debouncedSearch, sortOption]
+  );
+
+  useEffect(() => {
+    fetchProducts(0);
+  }, [fetchProducts]);
+
+  const handleResetFilters = () => {
+    setSelectedCategoryId(null);
+    setSearchTerm('');
+    setSortOption('id,desc');
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -123,7 +131,7 @@ export const HomePage: React.FC = () => {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-            Join bulk wholesale buys with neighbours in your locality. Pay only when the group target is reached and the mill shipment locks in.
+            Join bulk wholesale buys with neighbours in your locality. Real products sourced directly from regional APMC co-ops and farmer producer mills.
           </p>
 
           {/* 3 Value Propositions */}
@@ -161,206 +169,293 @@ export const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs & Categories Bar */}
+      {/* Search, Filter & Controls Bar */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-          {/* Filter Tabs */}
+        {/* Top Controls: Search & Sort */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search products by name or mill..."
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-2xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Sort Selector */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <SlidersHorizontal className="w-4 h-4 text-slate-400 hidden sm:block" />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as typeof sortOption)}
+              className="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+            >
+              <option value="id,desc">Default (Featured)</option>
+              <option value="price,asc">Price: Low to High</option>
+              <option value="price,desc">Price: High to Low</option>
+              <option value="name,asc">Name: A to Z</option>
+              <option value="newest,desc">Newest Additions</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Category Pills & Count */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             <button
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                activeTab === 'all'
+              onClick={() => setSelectedCategoryId(null)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                selectedCategoryId === null
                   ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
               }`}
             >
-              All Offers (6)
+              All Categories
             </button>
-            <button
-              onClick={() => setActiveTab('ending_soon')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                activeTab === 'ending_soon'
-                  ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Ending soon (&lt;24h)
-            </button>
-            <button
-              onClick={() => setActiveTab('almost_there')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                activeTab === 'almost_there'
-                  ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Almost there (≤5 units needed)
-            </button>
+
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryId(cat.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+                  selectedCategoryId === cat.id
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700 shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.name}</span>
+              </button>
+            ))}
           </div>
 
           <div className="text-xs text-slate-400 dark:text-slate-500 font-medium self-end sm:self-center">
-            Displaying 6 verified group deals
+            {isLoading
+              ? 'Loading products...'
+              : `Displaying ${productsPage.content.length} of ${productsPage.totalElements} products`}
           </div>
-        </div>
-
-        {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-2">
-            Categories:
-          </span>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(activeCategory === cat.id ? 'all' : cat.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-                activeCategory === cat.id
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <span>{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Offers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sampleOffers.map((offer) => {
-          const remaining = offer.target - offer.current;
-          const isFull = offer.current >= offer.target;
-          const isClosed = offer.status === 'OFFER_ENDED';
-
-          return (
-            <Card
-              key={offer.id}
-              padding="none"
-              className={`overflow-hidden flex flex-col justify-between hover:shadow-md transition group ${
-                isClosed ? 'opacity-80' : ''
-              }`}
+      {/* Error Alert with Retry */}
+      {error && (
+        <Alert
+          variant="error"
+          title="Error loading product inventory"
+          onDismiss={() => setError(null)}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-1">
+            <span>{error}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchProducts(productsPage.page)}
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             >
+              Retry Connection
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {/* Loading Skeleton Grid */}
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} padding="none" className="overflow-hidden flex flex-col justify-between">
               <div>
-                {/* Image & Header Badges */}
-                <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                  <img
-                    src={offer.image}
-                    alt={offer.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-
-                  {/* Top Badges */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    {offer.status === 'CONFIRMED' ? (
-                      <Badge variant="green" size="sm" icon={<Check className="w-3 h-3" />}>
-                        CONFIRMED
-                      </Badge>
-                    ) : isClosed ? (
-                      <Badge variant="gray" size="sm">
-                        OFFER ENDED
-                      </Badge>
-                    ) : (
-                      <Badge variant="green" size="sm">
-                        OPEN
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="absolute top-3 right-3">
-                    <CountdownTimer label={`ends in ${offer.endsIn}`} isUrgent={offer.isUrgent} />
-                  </div>
-
-                  {/* Unit Tag Bottom Left */}
-                  <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
-                    {offer.unitLabel}
-                  </div>
-
-                  {offer.userJoinedQty && (
-                    <div className="absolute bottom-3 right-3">
-                      <Badge variant="green" size="sm">
-                        ✓ You joined (qty {offer.userJoinedQty})
-                      </Badge>
-                    </div>
-                  )}
+                <Skeleton variant="rectangular" className="h-48 w-full" />
+                <div className="p-5 space-y-3">
+                  <Skeleton variant="text" className="w-3/4 h-5" />
+                  <Skeleton variant="text" className="w-1/2 h-3" />
+                  <Skeleton variant="rectangular" className="h-8 w-2/3 rounded-lg" />
+                  <Skeleton variant="rectangular" className="h-4 w-full rounded-md" />
                 </div>
+              </div>
+              <div className="p-5 pt-0">
+                <Skeleton variant="rectangular" className="h-10 w-full rounded-xl" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-                {/* Body Details */}
-                <div className="p-5 space-y-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition">
-                      {offer.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {offer.description}
-                    </p>
-                  </div>
+      {/* Empty State */}
+      {!isLoading && !error && productsPage.content.length === 0 && (
+        <EmptyState
+          title="No products found"
+          description={
+            debouncedSearch || selectedCategoryId !== null
+              ? "We couldn't find any products matching your current filters. Try clearing your search or category selection."
+              : 'No products are currently available. Check back soon for new wholesale batches!'
+          }
+          actionLabel="Clear Filters"
+          onAction={handleResetFilters}
+        />
+      )}
 
-                  {/* Price Row */}
-                  <PriceDisplay price={offer.price} mrp={offer.mrp} size="md" />
+      {/* Live Products Grid */}
+      {!isLoading && !error && productsPage.content.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {productsPage.content.map((product) => {
+            return (
+              <Card
+                key={product.id}
+                padding="none"
+                className="overflow-hidden flex flex-col justify-between hover:shadow-md transition group border border-slate-200/80 dark:border-slate-800"
+              >
+                <div>
+                  {/* Image & Header Badges */}
+                  <div className="relative h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <img
+                      src={
+                        product.imageUrl ||
+                        'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=600&q=80'
+                      }
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
 
-                  {/* Progress Section */}
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-700 dark:text-slate-300">
-                        {offer.current} of {offer.target} joined
-                      </span>
-                      {remaining > 0 ? (
-                        <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                          {remaining} more needed!
-                        </span>
-                      ) : (
-                        <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                          100% Target Met
-                        </span>
+                    {/* Top Badges */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2">
+                      <Badge variant="green" size="sm">
+                        ACTIVE DEAL
+                      </Badge>
+                      {product.isPesticideTested && (
+                        <Badge
+                          variant="outline-green"
+                          size="sm"
+                          icon={<BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                        >
+                          Tested
+                        </Badge>
                       )}
                     </div>
 
-                    <ProgressBar
-                      current={offer.current}
-                      total={offer.target}
-                      variant={isFull ? 'emerald' : 'emerald'}
+                    {/* Category Tag Top Right */}
+                    <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xs text-slate-700 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-200/60 dark:border-slate-700">
+                      {product.categoryName}
+                    </div>
+
+                    {/* Unit Tag Bottom Left */}
+                    <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
+                      {product.unitLabel}
+                    </div>
+
+                    {/* Savings Tag Bottom Right */}
+                    {product.savingsPercent > 0 && (
+                      <div className="absolute bottom-3 right-3 bg-emerald-600/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                        Save {product.savingsPercent}%
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Details */}
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition">
+                        {product.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                        {product.description}
+                      </p>
+                    </div>
+
+                    {/* Authoritative Price Row */}
+                    <PriceDisplay
+                      price={product.groupPrice}
+                      mrp={product.mrp}
+                      size="md"
                     />
 
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                      <span className="truncate">{offer.contextMessage}</span>
+                    {/* Progress & Value Hint */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-slate-700 dark:text-slate-300">
+                          Bulk Wholesale Batch
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                          Direct Mill Price
+                        </span>
+                      </div>
+
+                      <ProgressBar current={18} total={25} variant="emerald" />
+
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                        <span className="truncate">
+                          Save ₹{product.savingsAmount.toFixed(0)} vs local retail store
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Button Footer */}
-              <div className="p-5 pt-0">
-                <Link to={`/offers/${offer.id}`} className="block">
-                  {offer.userJoinedQty ? (
-                    <Button variant="secondary" size="md" className="w-full">
-                      View / Modify
-                    </Button>
-                  ) : isFull ? (
-                    <Button variant="secondary" size="md" className="w-full">
-                      View Summary
-                    </Button>
-                  ) : isClosed ? (
-                    <Button variant="outline" size="md" disabled className="w-full">
-                      Offer Closed
-                    </Button>
-                  ) : (
+                {/* Action Button Footer */}
+                <div className="p-5 pt-0">
+                  <Link to={`/offers/${product.id}`} className="block">
                     <Button
                       variant="primary"
                       size="md"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                       className="w-full"
                     >
-                      View Offer
+                      View Details &amp; Mill Spec
                     </Button>
-                  )}
-                </Link>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                  </Link>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!isLoading && !error && productsPage.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
+          <div className="text-xs text-slate-500">
+            Page {productsPage.page + 1} of {productsPage.totalPages}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={productsPage.page === 0}
+              onClick={() => fetchProducts(productsPage.page - 1)}
+              leftIcon={<ChevronLeft className="w-4 h-4" />}
+            >
+              Previous
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={productsPage.last || productsPage.page + 1 >= productsPage.totalPages}
+              onClick={() => fetchProducts(productsPage.page + 1)}
+              rightIcon={<ChevronRight className="w-4 h-4" />}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Suggest New Bulk Pool Banner */}
       <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -385,4 +480,3 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
-

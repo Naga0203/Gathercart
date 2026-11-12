@@ -15,16 +15,16 @@ public class HealthController {
     @Autowired(required = false)
     private DataSource dataSource;
 
-    @GetMapping("/health")
+    @GetMapping({"/health", "/api/v1/health"})
     public ResponseEntity<ApiResponse<HealthResponse>> checkHealth() {
         String dbStatus = "Not Connected";
         if (dataSource != null) {
             try (Connection conn = dataSource.getConnection()) {
                 if (conn.isValid(3)) {
-                    dbStatus = "Connected (Supabase PostgreSQL: " + conn.getMetaData().getDatabaseProductName() + " " + conn.getMetaData().getDatabaseProductVersion() + ")";
+                    dbStatus = "Connected (" + conn.getMetaData().getDatabaseProductName() + " " + conn.getMetaData().getDatabaseProductVersion() + ")";
                 }
             } catch (Exception e) {
-                dbStatus = "Configured / Awaiting valid Supabase credentials (" + e.getMessage() + ")";
+                dbStatus = "Configured / Awaiting connection (" + e.getMessage() + ")";
             }
         }
 

@@ -8,6 +8,7 @@ import { MyOrdersPage } from './pages/MyOrders/MyOrdersPage';
 import { OrderDetailPage } from './pages/OrderDetail/OrderDetailPage';
 import { PickupTokenPage } from './pages/PickupToken/PickupTokenPage';
 import { HowItWorksPage } from './pages/HowItWorks/HowItWorksPage';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export function App() {
   return (
@@ -15,15 +16,24 @@ export function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<MainLayout />}>
+            {/* Public routes */}
             <Route index element={<HomePage />} />
             <Route path="offers" element={<HomePage />} />
             <Route path="offers/:id" element={<OfferDetailPage />} />
+            <Route path="products" element={<HomePage />} />
+            <Route path="products/:id" element={<OfferDetailPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="login" element={<RegisterPage />} />
-            <Route path="orders" element={<MyOrdersPage />} />
-            <Route path="orders/:id" element={<OrderDetailPage />} />
-            <Route path="orders/:id/pickup-token" element={<PickupTokenPage />} />
             <Route path="how-it-works" element={<HowItWorksPage />} />
+
+            {/* Prepared Protected Routes structure (requireAuth=false in Phase 2) */}
+            <Route element={<ProtectedRoute requireAuth={false} />}>
+              <Route path="orders" element={<MyOrdersPage />} />
+              <Route path="orders/:id" element={<OrderDetailPage />} />
+              <Route path="orders/:id/pickup-token" element={<PickupTokenPage />} />
+            </Route>
+
+            {/* Fallback route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

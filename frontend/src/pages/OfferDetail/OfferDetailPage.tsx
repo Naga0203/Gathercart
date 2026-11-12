@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Share2,
   Clock,
-  Sparkles,
   BadgeCheck,
+  ShieldCheck,
+  Check,
+  Building2,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -16,15 +18,87 @@ import {
   Button,
   Card,
   Modal,
+  Skeleton,
+  Alert,
 } from '../../components/common';
+import { productService } from '../../services/productService';
+import type { ProductDetail } from '../../types/product';
 
 export const OfferDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+
+  const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string>('');
   const [pledgeQty, setPledgeQty] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalQty, setModalQty] = useState(2);
 
-  const price = 649;
-  const mrp = 850;
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await productService.getProductById(id);
+        setProduct(data);
+        setSelectedImage(data.imageUrl);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Product not found';
+        setError(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <Skeleton variant="text" className="w-1/3 h-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-7 space-y-4">
+            <Skeleton variant="rectangular" className="h-96 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-48 w-full rounded-2xl" />
+          </div>
+          <div className="lg:col-span-5 space-y-4">
+            <Skeleton variant="rectangular" className="h-72 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-48 w-full rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="py-12 max-w-lg mx-auto text-center space-y-4">
+        <Alert variant="error" title="Product Unavailable">
+          {error || 'The requested product could not be found.'}
+        </Alert>
+        <Link to="/">
+          <Button variant="primary" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            Back to Active Offers
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const effectivePrice = product.groupPrice;
+  const effectiveMrp = product.mrp;
+  const totalPrice = effectivePrice * pledgeQty;
+  const unitKg = product.unitWeightKg || 1;
+  const perKgPrice = (effectivePrice / Number(unitKg)).toFixed(2);
+
+  // Gallery images combined: primary + additional
+  const allImages = [
+    product.imageUrl,
+    ...(product.images ? product.images.map((img) => img.imageUrl) : []),
+  ].filter(Boolean);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -33,8 +107,8 @@ export const OfferDetailPage: React.FC = () => {
         <Breadcrumb
           items={[
             { label: 'Indiranagar Cluster', href: '/' },
-            { label: 'Grains & Staples', href: '/' },
-            { label: 'Sona Masoori Raw Rice (10 kg)' },
+            { label: product.categoryName || 'Products', href: '/' },
+            { label: product.name },
           ]}
         />
 
@@ -64,181 +138,242 @@ export const OfferDetailPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Gallery & Co-op Profile */}
         <div className="lg:col-span-7 space-y-6">
-          <Card padding="none" className="overflow-hidden">
+          <Card padding="none" className="overflow-hidden border border-slate-200/80 dark:border-slate-800">
             <div className="relative h-96 bg-slate-100 dark:bg-slate-800">
               <img
-                src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=1200&q=80"
-                alt="Sona Masoori Raw Rice"
-                className="w-full h-full object-cover"
+                src={selectedImage || product.imageUrl}
+                alt={product.name}
+                className="w-full h-full object-cover transition duration-300"
               />
               <div className="absolute top-4 left-4 flex gap-2">
                 <Badge variant="green" size="md">
                   OPEN FOR PLEDGES
                 </Badge>
-                <Badge variant="outline-green" size="md" icon={<BadgeCheck className="w-4 h-4 text-emerald-600" />}>
-                  Pesticide Residue Tested
-                </Badge>
+                {product.isPesticideTested && (
+                  <Badge variant="outline-green" size="md" icon={<BadgeCheck className="w-4 h-4 text-emerald-600" />}>
+                    Pesticide Residue Tested
+                  </Badge>
+                )}
+                {product.isLabVerified && (
+                  <Badge variant="blue" size="md">
+                    Lab Verified
+                  </Badge>
+                )}
               </div>
 
               <div className="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-xs text-white text-xs font-semibold px-3 py-1 rounded-lg">
-                Batch #RC-2023-SM8 • Tested Batch Analysis Available
+                Direct Mill Sourced • Verified Fresh Stock
               </div>
             </div>
 
             {/* Thumbnails */}
-            <div className="p-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-xl border-2 border-emerald-600 overflow-hidden cursor-pointer">
-                  <img
-                    src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80"
-                    alt="Rice thumb 1"
-                    className="w-full h-full object-cover"
-                  />
+            {allImages.length > 1 && (
+              <div className="p-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  {allImages.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(imgUrl)}
+                      className={`w-16 h-16 rounded-xl overflow-hidden cursor-pointer transition ${
+                        selectedImage === imgUrl
+                          ? 'border-2 border-emerald-600 shadow-xs'
+                          : 'border border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`${product.name} thumb ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
                 </div>
-                <div className="w-16 h-16 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer opacity-70 hover:opacity-100 transition">
-                  <img
-                    src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80"
-                    alt="Rice thumb 2"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
 
-              <span className="text-xs text-slate-500 font-medium">3 verified photos</span>
-            </div>
+                <span className="text-xs text-slate-500 font-medium">
+                  {allImages.length} verified photos
+                </span>
+              </div>
+            )}
           </Card>
 
           {/* Mill & Farmer Co-op Profile */}
-          <Card padding="md" className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-                  Mill &amp; Farmer Co-op Profile
-                </span>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Raichur Farmer Producer Co-operative
-                </h3>
-                <p className="text-xs text-slate-500">Tungabhadra Basin, Raichur District, Karnataka</p>
-              </div>
-              <Badge variant="blue" size="sm">
-                Co-op ID: KA-RAI-048
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] text-slate-400 uppercase">Harvest Date</div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">Nov 2023</div>
-                <div className="text-[10px] text-emerald-600 font-medium">Naturally Aged</div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] text-slate-400 uppercase">Moisture Level</div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">&lt; 11.8%</div>
-                <div className="text-[10px] text-slate-500 font-medium">Optimal Cook</div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] text-slate-400 uppercase">Grain Type</div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">Medium Raw</div>
-                <div className="text-[10px] text-slate-500 font-medium">Aromatic &amp; Light</div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
-                <div className="text-[10px] text-slate-400 uppercase">Processing</div>
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">Zero Wax</div>
-                <div className="text-[10px] text-slate-500 font-medium">Single Polish</div>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 dark:text-slate-300 bg-emerald-50/60 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/60 leading-relaxed">
-              ✓ Direct procurement eliminates 3 intermediate middlemen (distributors, city commission agents, and retail kirana markups). 100% of proceeds go directly to the cooperative pool account.
-            </p>
-          </Card>
-
-          {/* Recent Neighbours who joined */}
-          <Card padding="md" className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Local Community Pulse</span>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Recent neighbours who joined this batch</h4>
-              </div>
-              <Badge variant="green" size="sm">
-                14 Households Participating
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center">
-                  PM
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>Priya M.</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-emerald-100 text-emerald-800 font-semibold">2 bags</span>
+          {product.coopProfile && (
+            <Card padding="md" className="space-y-4 border border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold flex-shrink-0">
+                    <Building2 className="w-5 h-5" />
                   </div>
-                  <div className="text-[10px] text-slate-400">6th Main, Indiranagar • 18m ago</div>
+                  <div>
+                    <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                      Mill &amp; Farmer Co-op Profile
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      {product.coopProfile.name}
+                    </h3>
+                    <p className="text-xs text-slate-500">{product.coopProfile.location}</p>
+                  </div>
+                </div>
+                <Badge variant="blue" size="sm">
+                  Co-op ID: {product.coopProfile.coopIdCode}
+                </Badge>
+              </div>
+
+              {/* Quality Specs Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Harvest Date</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                    {product.harvestDate || 'Fresh Batch'}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 font-medium">Verified Batch</div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Moisture Level</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                    {product.moistureLevel || 'Standard'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium">Optimal Cook</div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Variety / Grade</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5 truncate">
+                    {product.grainType || 'Premium'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium">Aromatic &amp; Pure</div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] text-slate-400 uppercase">Processing</div>
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5 truncate">
+                    {product.processing || 'Zero Wax'}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-medium">Cold Sorted</div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-slate-700 text-white font-bold text-xs flex items-center justify-center">
-                  KR
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>Karthik R.</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-slate-200 text-slate-800 font-semibold">1 bag</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">Defence Colony • 45m ago</div>
-                </div>
-              </div>
+              {product.coopProfile.description && (
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {product.coopProfile.description}
+                </p>
+              )}
 
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-amber-700 text-white font-bold text-xs flex items-center justify-center">
-                  AD
-                </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 bg-emerald-50/60 dark:bg-emerald-950/30 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/60 leading-relaxed">
+                ✓ Direct procurement eliminates 3 intermediate middlemen (distributors, city commission agents, and retail kirana markups). 100% of proceeds go directly to the cooperative pool account.
+              </p>
+            </Card>
+          )}
+
+          {/* Specifications & Quality Notes */}
+          {(product.detailedDescription || product.culinaryProfile || product.qualityMetrics) && (
+            <Card padding="md" className="space-y-4 border border-slate-200/80 dark:border-slate-800">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
+                🌾 Product Specifications &amp; Quality Notes
+              </h4>
+
+              {product.detailedDescription && (
                 <div>
-                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>Anand &amp; Deepa</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-slate-200 text-slate-800 font-semibold">1 bag</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">HAL 2nd Stage • 2h ago</div>
+                  <h5 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Authenticity &amp; Origin
+                  </h5>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {product.detailedDescription}
+                  </p>
                 </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                {product.culinaryProfile && (
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-1 uppercase tracking-wider">
+                      Culinary Profile
+                    </div>
+                    <pre className="text-xs text-slate-600 dark:text-slate-400 font-sans whitespace-pre-line leading-relaxed">
+                      {product.culinaryProfile}
+                    </pre>
+                  </div>
+                )}
+
+                {product.qualityMetrics && (
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                    <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 mb-1 uppercase tracking-wider">
+                      Batch Quality Metrics
+                    </div>
+                    <pre className="text-xs text-slate-600 dark:text-slate-400 font-sans whitespace-pre-line leading-relaxed">
+                      {product.qualityMetrics}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Guarantee Section */}
+          <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20 p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                GatherCart Guarantee: Zero Upfront Payment, Zero Risk
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-600 dark:text-slate-400">
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <span>Cancel anytime prior to the milestone target lock.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <span>Zero auto-debits if the quota is not met.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <span>Official UPI settlement link only when the mill dispatches.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <span>Quality inspected at community hub before handover.</span>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
 
-        {/* Right Column: Pricing, Batch Progress & Pledge Action */}
+        {/* Right Column: Pricing & Pledge Box */}
         <div className="lg:col-span-5 space-y-6">
-          <Card padding="lg" className="space-y-6 sticky top-24">
+          <Card padding="lg" className="space-y-6 border border-slate-200/80 dark:border-slate-800 shadow-sm">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Wholesale Collective Batch #8
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                Wholesale Collective Offer
               </span>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-1 leading-tight">
-                Sona Masoori Raw Rice (Aged 12 Months)
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                10 kg Food-Grade Cotton Lined Bag • Direct Mill Sourced
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-1 leading-snug">
+                {product.name}
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {product.unitLabel} • {product.description}
               </p>
             </div>
 
-            {/* Price section */}
-            <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60">
-              <PriceDisplay price={price} mrp={mrp} size="lg" />
-              <div className="text-[11px] text-emerald-800 dark:text-emerald-300 font-semibold mt-1">
-                Free Community Hub Drop Included
+            {/* Authoritative Price Display */}
+            <div className="space-y-1 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <PriceDisplay
+                price={effectivePrice}
+                mrp={effectiveMrp}
+                size="lg"
+              />
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+                <span>₹{perKgPrice} / unit equivalent</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                  Free Community Hub Drop
+                </span>
               </div>
             </div>
 
-            {/* Quota Progress */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm font-bold">
-                <span className="flex items-center gap-1.5 text-slate-900 dark:text-white">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
+            {/* Progress Bar */}
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   23 of 25 joined
                 </span>
                 <span className="text-emerald-700 dark:text-emerald-400">92% target met</span>
@@ -246,213 +381,118 @@ export const OfferDetailPage: React.FC = () => {
 
               <ProgressBar current={23} total={25} variant="emerald" />
 
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
-                <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                  Almost there! Just 2 more bags needed
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                  ⚡ Almost there! Just 2 more needed
                 </span>
-                <span className="flex items-center gap-1 font-medium">
-                  <Clock className="w-3.5 h-3.5" /> Ends in 18h 30m
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-2">
-                <span>Wholesale Quota: 25 Bags (250 kg)</span>
-                <span>Household Limit: Max 3 bags</span>
+                <span>Wholesale Quota: 25 Units</span>
               </div>
             </div>
 
-            {/* Quantity Selector & Calculation */}
-            <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+            {/* Quantity Selector */}
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Select Bags to Pledge:
+                  Select Units to Pledge:
                 </span>
                 <QuantitySelector
                   value={pledgeQty}
                   onChange={setPledgeQty}
                   min={1}
                   max={3}
-                  unit="bag"
+                  unit={product.unitLabel.includes('bag') ? 'bag' : 'unit'}
                 />
               </div>
 
-              <div className="flex items-center justify-between text-xs font-semibold p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
-                <span className="text-slate-600 dark:text-slate-400">Order calculation:</span>
-                <span className="text-slate-900 dark:text-white">
-                  {pledgeQty} × ₹{price} = <strong className="text-sm">₹{(pledgeQty * price).toLocaleString('en-IN')} total</strong>
+              {/* Order Calculation Preview */}
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900/60 flex items-center justify-between text-xs">
+                <span className="text-slate-600 dark:text-slate-400">
+                  Calculation ({pledgeQty} × ₹{effectivePrice}):
+                </span>
+                <span className="font-bold text-emerald-800 dark:text-emerald-300 text-sm">
+                  ₹{totalPrice.toLocaleString('en-IN')} total
                 </span>
               </div>
-            </div>
 
-            {/* Primary Pledge CTA */}
-            <div className="space-y-3 pt-2">
+              {/* Pledge Button */}
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => {
-                  setModalQty(pledgeQty);
-                  setIsModalOpen(true);
-                }}
-                className="w-full text-base font-bold"
+                className="w-full text-base py-3.5"
+                onClick={() => setIsModalOpen(true)}
               >
-                Pledge {pledgeQty} Bag{pledgeQty > 1 ? 's' : ''} (₹0 Upfront) →
+                Pledge {pledgeQty} {pledgeQty === 1 ? 'Unit' : 'Units'} (₹0 Upfront) →
               </Button>
 
-              <div className="text-[11px] text-center text-slate-500 dark:text-slate-400 leading-tight">
-                No money collected right now. You will only receive a direct secure UPI payment request (GPay/PhonePe/Paytm) once the 25th bag pledge is locked.
+              <div className="text-[11px] text-slate-500 text-center flex items-center justify-center gap-1.5 pt-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>No money collected now. Pay only via UPI once batch hits 100%.</span>
               </div>
+            </div>
 
+            {/* Share link */}
+            <div className="pt-2">
               <Button
                 variant="outline"
                 size="sm"
-                leftIcon={<Share2 className="w-4 h-4 text-emerald-600" />}
-                className="w-full mt-2"
+                className="w-full"
+                leftIcon={<Share2 className="w-4 h-4" />}
                 onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  alert('Batch link copied! Share with your apartment building.');
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Product link copied to clipboard!');
                 }}
               >
-                Share to Apartment WhatsApp to lock remaining 2 bags
+                Share with Neighbours to Unlock Quota
               </Button>
             </div>
           </Card>
         </div>
       </div>
 
-      {/* Screen 4: Join Collective Batch Modal */}
+      {/* Confirmation Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        maxWidth="lg"
-        title={
-          <div className="flex items-center gap-2">
-            <span>Join Collective Batch #8</span>
-            <Badge variant="green" size="sm">Active Pool</Badge>
-          </div>
-        }
-        subtitle="Lock community wholesale pricing with neighbours"
+        title={`Confirm Pledge for ${product.name}`}
       >
-        <div className="space-y-5">
-          {/* Summary Box */}
-          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/60 flex items-center gap-3">
-            <div className="w-14 h-14 rounded-xl bg-white dark:bg-slate-800 overflow-hidden flex-shrink-0">
-              <img
-                src="https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=200&q=80"
-                alt="Rice bag"
-                className="w-full h-full object-cover"
-              />
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            You are reserving <strong>{pledgeQty} {product.unitLabel}</strong> at direct mill wholesale price of{' '}
+            <strong>₹{effectivePrice}</strong> each (MRP ₹{effectiveMrp}).
+          </p>
+
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-900 dark:text-emerald-200 space-y-1">
+            <div className="flex justify-between font-bold">
+              <span>Total Payable at Milestone:</span>
+              <span>₹{totalPrice.toLocaleString('en-IN')}</span>
             </div>
-            <div>
-              <div className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                Raichur Co-op Mill • Aged 12 Mo.
-              </div>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                Sona Masoori Raw Rice (10 kg bag)
-              </h4>
-              <PriceDisplay price={price} mrp={mrp} size="sm" />
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
+              <span>Your Savings:</span>
+              <span>₹{((effectiveMrp - effectivePrice) * pledgeQty).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>Upfront Payment Due Today:</span>
+              <span>₹0.00</span>
             </div>
           </div>
 
-          {/* Progress Alert */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-600" />
-                Batch Progress: 23 of 25 pledged
-              </span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-extrabold">
-                Only 2 bags to unlock!
-              </span>
-            </div>
-            <ProgressBar current={23} total={25} variant="emerald" />
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span>Quota target: 250 kg collective batch</span>
-              <span>Est. lock: Today in ~45 mins</span>
-            </div>
-          </div>
+          <p className="text-xs text-slate-500">
+            You will receive a notification when the quota is reached with instructions for community hub collection.
+          </p>
 
-          {/* Quantity Selector */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <span>Select Quantity</span>
-                  <Badge variant="blue" size="sm">Limit: 3 Bags</Badge>
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  Max 3 bags (30 kg) per household for equitable community access.
-                </div>
-              </div>
-              <QuantitySelector
-                value={modalQty}
-                onChange={setModalQty}
-                min={1}
-                max={3}
-                unit="bags"
-              />
-            </div>
-          </div>
-
-          {/* Cost & Community Savings Ledger */}
-          <div className="space-y-2 p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
-            <h5 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
-              Cost &amp; Community Savings Ledger
-            </h5>
-            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 pt-1">
-              <span>Wholesale Pledge Price ({modalQty} × 10 kg bags)</span>
-              <span className="font-semibold text-slate-900 dark:text-white">
-                ₹{(modalQty * price).toLocaleString('en-IN')}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-              <span>MRP Retail Value</span>
-              <span className="line-through text-slate-400">
-                ₹{(modalQty * mrp).toLocaleString('en-IN')}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-              <span>Community Hub Bulk Logistics</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">FREE</span>
-            </div>
-
-            <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex items-center justify-between text-sm font-bold">
-              <span className="text-slate-900 dark:text-white">Total Due at Milestone Lock</span>
-              <span className="text-lg font-black text-slate-900 dark:text-white">
-                ₹{(modalQty * price).toLocaleString('en-IN')}
-              </span>
-            </div>
-            <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold text-right">
-              You save ₹{(modalQty * (mrp - price)).toLocaleString('en-IN')} (24%) vs retail
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>Drop-off &amp; Pick-up Location</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              Cluster Indiranagar – 560038
-            </span>
-          </div>
-
-          {/* Modal Actions */}
-          <div className="space-y-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
             <Button
               variant="primary"
-              size="lg"
-              className="w-full text-base font-bold"
+              size="sm"
               onClick={() => {
-                alert(`Pledge of ${modalQty} bag(s) confirmed! Redirecting to My Orders.`);
+                alert(`Pledge of ${pledgeQty} units confirmed! (In Phase 4 this will persist pledges to the database).`);
                 setIsModalOpen(false);
               }}
             >
-              Confirm Pledge for {modalQty} Bags (₹0 Due Now) →
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-slate-500"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel &amp; Return
+              Confirm Reservation
             </Button>
           </div>
         </div>

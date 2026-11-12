@@ -7,8 +7,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class GatherCartApplication {
 
-    public static void main(String[] args) {
-        // Load .env file if present
+    static {
+        loadDotenv();
+    }
+
+    public static void loadDotenv() {
         try {
             Dotenv dotenv = Dotenv.configure()
                     .ignoreIfMissing()
@@ -20,9 +23,11 @@ public class GatherCartApplication {
                 }
             });
         } catch (Exception ignored) {
-            // If .env is not present, system environment variables are used
+            // Fall back to system properties / application.yml defaults
         }
+    }
 
+    public static void main(String[] args) {
         SpringApplication.run(GatherCartApplication.class, args);
     }
 }
