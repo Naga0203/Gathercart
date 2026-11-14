@@ -1,13 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { MapPin, ChevronDown, ShoppingBag, Menu, X, User, Check } from 'lucide-react';
+import { MapPin, ChevronDown, ShoppingBag, ShoppingCart, Menu, X, User, Check } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { cartService } from '../services/cartService';
 
 export const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clusterDropdownOpen, setClusterDropdownOpen] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState('Indiranagar, Bengaluru – 560038');
+  const [cartTotalItems, setCartTotalItems] = useState<number>(0);
   const clusterDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    cartService.getCart()
+      .then((cart) => setCartTotalItems(cart.totalItems))
+      .catch(() => {});
+
+    const cleanup = cartService.onCartUpdated((cart) => {
+      setCartTotalItems(cart.totalItems);
+    });
+    return cleanup;
+  }, []);
 
   const availableClusters = [
     { name: 'Indiranagar, Bengaluru – 560038', activePools: 6, families: 248 },
@@ -130,6 +143,25 @@ export const Header: React.FC = () => {
             </NavLink>
 
             <NavLink
+              to="/cart"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-emerald-700 text-white shadow-xs dark:bg-emerald-600'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`
+              }
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Cart</span>
+              {cartTotalItems > 0 && (
+                <span className="min-w-4 h-4 px-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-center">
+                  {cartTotalItems}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
               to="/orders"
               className={({ isActive }) =>
                 `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
@@ -210,6 +242,28 @@ export const Header: React.FC = () => {
               }
             >
               How It Works
+            </NavLink>
+
+            <NavLink
+              to="/cart"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold ${
+                  isActive
+                    ? 'bg-emerald-700 text-white dark:bg-emerald-600'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`
+              }
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Cart</span>
+              </div>
+              {cartTotalItems > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
+                  {cartTotalItems}
+                </span>
+              )}
             </NavLink>
 
             <NavLink
