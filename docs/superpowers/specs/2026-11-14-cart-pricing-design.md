@@ -155,3 +155,4 @@ CREATE INDEX idx_cart_item_product ON cart_item(product_id);
    - REST Controller Tests: API contract compliance for all `/api/v1/cart` endpoints.
 2. **Frontend Verification**:
    - End-to-end cart flow: Adding from offer detail or home, viewing cart, adjusting quantity, removing item, clearing cart, empty state, and checking price re-computation.
+

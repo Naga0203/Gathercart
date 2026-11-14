@@ -21,3 +21,4 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     @Query("SELECT DISTINCT c FROM Cart c LEFT JOIN FETCH c.items i LEFT JOIN FETCH i.product WHERE c.sessionId = :sessionId")
     Optional<Cart> findWithItemsBySessionId(@Param("sessionId") String sessionId);
 }
+

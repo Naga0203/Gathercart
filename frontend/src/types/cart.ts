@@ -41,3 +41,4 @@ export interface AddToCartPayload {
 export interface UpdateCartItemPayload {
   quantity: number;
 }
+

@@ -225,3 +225,4 @@ Run `npm run build`.
 
 - [ ] **Step 3: Verify with real backend execution**
 Start backend, perform API requests to verify adding products, updating quantities, recalculating prices, removing products, clearing cart, and checking edge cases.
+

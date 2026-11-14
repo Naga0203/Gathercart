@@ -86,3 +86,4 @@ export const cartService = {
     return () => window.removeEventListener(CART_UPDATED_EVENT, handler);
   },
 };
+

@@ -42,3 +42,4 @@ public class CartItem extends BaseEntity {
     @Column(name = "group_purchase_id")
     private Long groupPurchaseId;
 }
+
