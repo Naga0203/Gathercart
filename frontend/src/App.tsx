@@ -8,6 +8,7 @@ import { MyOrdersPage } from './pages/MyOrders/MyOrdersPage';
 import { OrderDetailPage } from './pages/OrderDetail/OrderDetailPage';
 import { PickupTokenPage } from './pages/PickupToken/PickupTokenPage';
 import { HowItWorksPage } from './pages/HowItWorks/HowItWorksPage';
+import { CartPage } from './pages/Cart/CartPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export function App() {
@@ -22,6 +23,7 @@ export function App() {
             <Route path="offers/:id" element={<OfferDetailPage />} />
             <Route path="products" element={<HomePage />} />
             <Route path="products/:id" element={<OfferDetailPage />} />
+            <Route path="cart" element={<CartPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="login" element={<RegisterPage />} />
             <Route path="how-it-works" element={<HowItWorksPage />} />

@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Check,
   Building2,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -22,6 +23,7 @@ import {
   Alert,
 } from '../../components/common';
 import { productService } from '../../services/productService';
+import { cartService } from '../../services/cartService';
 import type { ProductDetail } from '../../types/product';
 
 export const OfferDetailPage: React.FC = () => {
@@ -34,6 +36,9 @@ export const OfferDetailPage: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState<string | null>(null);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -87,6 +92,22 @@ export const OfferDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    setIsAddingToCart(true);
+    setCartError(null);
+    try {
+      await cartService.addToCart({ productId: product.id, quantity: pledgeQty });
+      setCartSuccess(`Added ${pledgeQty} ${product.unitLabel} to your cart!`);
+      setTimeout(() => setCartSuccess(null), 3500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add item to cart';
+      setCartError(msg);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   const effectivePrice = product.groupPrice;
   const effectiveMrp = product.mrp;
@@ -414,15 +435,40 @@ export const OfferDetailPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Pledge Button */}
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full text-base py-3.5"
-                onClick={() => setIsModalOpen(true)}
-              >
-                Pledge {pledgeQty} {pledgeQty === 1 ? 'Unit' : 'Units'} (₹0 Upfront) →
-              </Button>
+              {/* Cart Notification Alerts */}
+              {cartError && (
+                <Alert variant="error" className="text-xs">
+                  {cartError}
+                </Alert>
+              )}
+              {cartSuccess && (
+                <Alert variant="success" className="text-xs">
+                  {cartSuccess}
+                </Alert>
+              )}
+
+              {/* Action Buttons: Add to Cart and Pledge */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full text-sm font-bold py-3.5 border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  leftIcon={<ShoppingCart className="w-4 h-4" />}
+                  disabled={isAddingToCart}
+                  onClick={handleAddToCart}
+                >
+                  {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                </Button>
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full text-sm font-bold py-3.5"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  Pledge Units →
+                </Button>
+              </div>
 
               <div className="text-[11px] text-slate-500 text-center flex items-center justify-center gap-1.5 pt-1">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
