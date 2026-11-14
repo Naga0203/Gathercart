@@ -20,6 +20,7 @@ backend/.env
 frontend/.env
 *.local
 
+
 # IDE & Editor files
 .idea/
 .vscode/
@@ -28,9 +29,10 @@ frontend/.env
 *.njsproj
 *.sln
 *.sw?
+.agents
 .DS_Store
 Thumbs.db
-
+.superpowers
 
 # Logs
 logs/

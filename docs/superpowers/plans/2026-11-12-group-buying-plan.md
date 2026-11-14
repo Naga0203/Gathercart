@@ -751,3 +751,4 @@ Expected: PASS with 0 errors.
 git add backend/src/test/java/com/gathercart/service/GroupPurchaseConcurrencyTest.java
 git commit -m "test: add concurrent participation stress test and verify full-stack build"
 ```
+
