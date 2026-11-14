@@ -24,6 +24,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final CoopProfileRepository coopProfileRepository;
     private final ProductRepository productRepository;
+    private final com.gathercart.repository.GroupPurchaseRepository groupPurchaseRepository;
 
     @Override
     @Transactional
@@ -32,6 +33,10 @@ public class DataInitializer implements CommandLineRunner {
             seedData();
         } else {
             log.info("Database already seeded with {} products.", productRepository.count());
+        }
+
+        if (groupPurchaseRepository.count() == 0) {
+            seedGroupPurchases();
         }
     }
 
@@ -277,6 +282,51 @@ public class DataInitializer implements CommandLineRunner {
 
         productRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6));
         log.info("Successfully seeded 4 categories, 6 co-op profiles, and 6 verified products.");
+    }
+
+    private void seedGroupPurchases() {
+        List<Product> products = productRepository.findAll();
+        if (products.isEmpty()) return;
+
+        Product rice = products.stream()
+                .filter(p -> p.getName().contains("Sona Masoori"))
+                .findFirst()
+                .orElse(products.get(0));
+
+        com.gathercart.entity.GroupPurchase batch1 = com.gathercart.entity.GroupPurchase.builder()
+                .batchCode("IND-409")
+                .product(rice)
+                .clusterName("Indiranagar")
+                .targetQuantity(25)
+                .currentQuantity(20)
+                .householdLimit(3)
+                .status(com.gathercart.entity.GroupPurchaseStatus.OPEN)
+                .deadline(java.time.LocalDateTime.now().plusDays(3))
+                .leadOrganiser("Priya M. (Society Coordinator)")
+                .hubDropLocation("Indiranagar Club – Gate 2")
+                .isFreeDelivery(true)
+                .build();
+
+        if (products.size() > 1) {
+            Product oil = products.get(1);
+            com.gathercart.entity.GroupPurchase batch2 = com.gathercart.entity.GroupPurchase.builder()
+                    .batchCode("IND-410")
+                    .product(oil)
+                    .clusterName("Indiranagar")
+                    .targetQuantity(15)
+                    .currentQuantity(11)
+                    .householdLimit(3)
+                    .status(com.gathercart.entity.GroupPurchaseStatus.OPEN)
+                    .deadline(java.time.LocalDateTime.now().plusDays(2))
+                    .leadOrganiser("Karthik R. (Green Glen Hub)")
+                    .hubDropLocation("Indiranagar Club – Gate 2")
+                    .isFreeDelivery(true)
+                    .build();
+            groupPurchaseRepository.saveAll(List.of(batch1, batch2));
+        } else {
+            groupPurchaseRepository.save(batch1);
+        }
+        log.info("Successfully seeded active group purchase batches IND-409 and IND-410.");
     }
 }
 
