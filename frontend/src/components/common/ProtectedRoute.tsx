@@ -1,35 +1,37 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../../features/auth/useAuth';
 
 export interface ProtectedRouteProps {
-  /**
-   * When true, enforces authentication check.
-   * Defaults to false in Phase 2 to prepare routing structure without locking out screens.
-   */
   requireAuth?: boolean;
+  requiredRole?: 'ADMIN' | 'CUSTOMER';
   redirectTo?: string;
   children?: React.ReactNode;
 }
 
-/**
- * ProtectedRoute foundation component.
- * Prepared for Phase 7 (Authentication) to guard private routes
- * (orders, profile, checkout) while remaining accessible during UI development.
- */
-
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  requireAuth = false,
+  requireAuth = true,
+  requiredRole,
   redirectTo = '/login',
   children,
 }) => {
   const location = useLocation();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  // In Phase 2/future: checks auth token from localStorage / auth state
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const isAuthenticated = !requireAuth || Boolean(token);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-700" />
+      </div>
+    );
+  }
 
-  if (!isAuthenticated) {
+  if (requireAuth && !isAuthenticated) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;

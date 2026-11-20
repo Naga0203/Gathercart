@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { MapPin, ChevronDown, ShoppingBag, ShoppingCart, Menu, X, User, Check } from 'lucide-react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { MapPin, ChevronDown, ShoppingBag, ShoppingCart, Menu, X, User, Check, LogOut } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { cartService } from '../services/cartService';
+import { useAuth } from '../features/auth/useAuth';
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clusterDropdownOpen, setClusterDropdownOpen] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState('Indiranagar, Bengaluru – 560038');
@@ -41,6 +45,13 @@ export const Header: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const displayName = user?.fullName || 'Account';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -178,21 +189,45 @@ export const Header: React.FC = () => {
             </NavLink>
           </nav>
 
-          {/* Right Controls: Theme Toggle & User Profile */}
+          {/* Right Controls: Theme Toggle & User Auth */}
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
 
-            <Link
-              to="/register"
-              className="hidden sm:flex items-center gap-2 p-1.5 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-            >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
-                <User className="w-4 h-4" />
+            {isAuthenticated ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
+                    {displayName}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Sign out"
+                  className="p-2 rounded-xl text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Ananya S.
-              </span>
-            </Link>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition"
+                >
+                  Join Cluster
+                </Link>
+              </div>
+            )}
 
             {/* Mobile menu button */}
             <button
@@ -283,14 +318,42 @@ export const Header: React.FC = () => {
               </span>
             </NavLink>
 
-            <NavLink
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <User className="w-4 h-4 text-emerald-600" />
-              <span>Account / Profile (Ananya S.)</span>
-            </NavLink>
+            {isAuthenticated ? (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <User className="w-4 h-4 text-emerald-600" />
+                  <span>{displayName}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 px-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 text-sm font-semibold text-white bg-emerald-700 rounded-xl shadow-xs"
+                >
+                  Join
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

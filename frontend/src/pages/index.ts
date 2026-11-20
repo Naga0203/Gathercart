@@ -5,4 +5,5 @@ export { OrderDetailPage } from './OrderDetail/OrderDetailPage';
 export { PickupTokenPage } from './PickupToken/PickupTokenPage';
 export { HowItWorksPage } from './HowItWorks/HowItWorksPage';
 export { RegisterPage } from './Auth/RegisterPage';
+export { LoginPage } from './Auth/LoginPage';
 export { CartPage } from './Cart/CartPage';
