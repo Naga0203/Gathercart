@@ -6,14 +6,13 @@ import com.gathercart.dto.UpdateCartItemRequest;
 
 public interface CartService {
 
-    CartResponse getCart(Long userId, String sessionId, Long clusterId);
+    CartResponse getCart(Long userId);
 
-    CartResponse addToCart(Long userId, String sessionId, Long clusterId, AddToCartRequest request);
+    CartResponse addToCart(Long userId, AddToCartRequest request);
 
-    CartResponse updateQuantity(Long userId, String sessionId, Long clusterId, Long itemId, UpdateCartItemRequest request);
+    CartResponse updateQuantity(Long userId, Long itemId, UpdateCartItemRequest request);
 
-    CartResponse removeItem(Long userId, String sessionId, Long clusterId, Long itemId);
+    CartResponse removeItem(Long userId, Long itemId);
 
-    CartResponse clearCart(Long userId, String sessionId, Long clusterId);
+    CartResponse clearCart(Long userId);
 }
-

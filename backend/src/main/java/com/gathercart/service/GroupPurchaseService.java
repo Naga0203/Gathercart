@@ -162,6 +162,11 @@ public class GroupPurchaseService {
             throw new BusinessException("Group purchase deadline has passed");
         }
 
+        // Ownership enforcement: userId is required for joining
+        if (request.getUserId() == null) {
+            throw new BusinessException("User ID is required for joining a group purchase");
+        }
+
         // Duplicate active pledge validation
         boolean duplicatePhone = groupParticipantRepository.findByGroupPurchaseIdAndPhoneAndStatus(
                 groupPurchaseId, request.getPhone(), GroupParticipantStatus.ACTIVE).isPresent();

@@ -38,20 +38,19 @@ public class CartServiceImpl implements CartService {
     private final ProductRepository productRepository;
     private final GroupPurchaseRepository groupPurchaseRepository;
 
-    private static final Long DEFAULT_USER_ID = 1L;
     private static final Long DEFAULT_CLUSTER_ID = 1L;
     private static final String DEFAULT_DELIVERY_NOTE = "Free pickup at Indiranagar Community Hub";
 
     @Override
     @Transactional(readOnly = true)
-    public CartResponse getCart(Long userId, String sessionId, Long clusterId) {
-        Cart cart = getOrCreateCart(userId, sessionId, clusterId);
+    public CartResponse getCart(Long userId) {
+        Cart cart = getOrCreateCart(userId);
         return mapToCartResponse(cart);
     }
 
     @Override
-    public CartResponse addToCart(Long userId, String sessionId, Long clusterId, AddToCartRequest request) {
-        Cart cart = getOrCreateCart(userId, sessionId, clusterId);
+    public CartResponse addToCart(Long userId, AddToCartRequest request) {
+        Cart cart = getOrCreateCart(userId);
 
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
@@ -79,7 +78,6 @@ public class CartServiceImpl implements CartService {
                 throw new BusinessException("Maximum allowed quantity for '" + product.getName() + "' is " + maxAllowed);
             }
 
-            // Bind active group purchase if available
             Long activeGroupPurchaseId = findActiveGroupPurchase(product.getId())
                     .map(GroupPurchase::getId)
                     .orElse(null);
@@ -100,8 +98,8 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse updateQuantity(Long userId, String sessionId, Long clusterId, Long itemId, UpdateCartItemRequest request) {
-        Cart cart = getOrCreateCart(userId, sessionId, clusterId);
+    public CartResponse updateQuantity(Long userId, Long itemId, UpdateCartItemRequest request) {
+        Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
                 .filter(i -> i.getId().equals(itemId))
@@ -129,8 +127,8 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse removeItem(Long userId, String sessionId, Long clusterId, Long itemId) {
-        Cart cart = getOrCreateCart(userId, sessionId, clusterId);
+    public CartResponse removeItem(Long userId, Long itemId) {
+        Cart cart = getOrCreateCart(userId);
 
         CartItem item = cart.getItems().stream()
                 .filter(i -> i.getId().equals(itemId))
@@ -145,37 +143,18 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse clearCart(Long userId, String sessionId, Long clusterId) {
-        Cart cart = getOrCreateCart(userId, sessionId, clusterId);
+    public CartResponse clearCart(Long userId) {
+        Cart cart = getOrCreateCart(userId);
         cart.clearItems();
         cartRepository.save(cart);
         return mapToCartResponse(cart);
     }
 
-    private Cart getOrCreateCart(Long userId, String sessionId, Long clusterId) {
-        Long resolvedClusterId = clusterId != null ? clusterId : DEFAULT_CLUSTER_ID;
-
-        if (userId != null) {
-            return cartRepository.findByUserId(userId)
-                    .orElseGet(() -> cartRepository.save(Cart.builder()
-                            .userId(userId)
-                            .clusterId(resolvedClusterId)
-                            .build()));
-        }
-
-        if (sessionId != null && !sessionId.trim().isEmpty()) {
-            return cartRepository.findBySessionId(sessionId)
-                    .orElseGet(() -> cartRepository.save(Cart.builder()
-                            .sessionId(sessionId)
-                            .clusterId(resolvedClusterId)
-                            .build()));
-        }
-
-        // Default fallback to pre-auth active user Ananya Sharma
-        return cartRepository.findByUserId(DEFAULT_USER_ID)
+    private Cart getOrCreateCart(Long userId) {
+        return cartRepository.findByUserId(userId)
                 .orElseGet(() -> cartRepository.save(Cart.builder()
-                        .userId(DEFAULT_USER_ID)
-                        .clusterId(resolvedClusterId)
+                        .userId(userId)
+                        .clusterId(DEFAULT_CLUSTER_ID)
                         .build()));
     }
 
