@@ -4,12 +4,16 @@ import com.gathercart.entity.Category;
 import com.gathercart.entity.CoopProfile;
 import com.gathercart.entity.Product;
 import com.gathercart.entity.ProductImage;
+import com.gathercart.entity.User;
+import com.gathercart.entity.UserRole;
 import com.gathercart.repository.CategoryRepository;
 import com.gathercart.repository.CoopProfileRepository;
 import com.gathercart.repository.ProductRepository;
+import com.gathercart.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +29,14 @@ public class DataInitializer implements CommandLineRunner {
     private final CoopProfileRepository coopProfileRepository;
     private final ProductRepository productRepository;
     private final com.gathercart.repository.GroupPurchaseRepository groupPurchaseRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public void run(String... args) {
+        seedUsers();
+
         if (categoryRepository.count() == 0) {
             seedData();
         } else {
@@ -37,6 +45,38 @@ public class DataInitializer implements CommandLineRunner {
 
         if (groupPurchaseRepository.count() == 0) {
             seedGroupPurchases();
+        }
+    }
+
+    private void seedUsers() {
+        if (!userRepository.existsByEmail("admin@gathercart.com")) {
+            User admin = User.builder()
+                    .fullName("GatherCart Admin")
+                    .email("admin@gathercart.com")
+                    .phone("+910000000000")
+                    .passwordHash(passwordEncoder.encode("admin123"))
+                    .role(UserRole.ADMIN)
+                    .clusterId(1L)
+                    .isActive(true)
+                    .penaltyCount(0)
+                    .build();
+            userRepository.save(admin);
+            log.info("Seeded default admin user: admin@gathercart.com");
+        }
+
+        if (!userRepository.existsByEmail("ananya.sharma@example.com")) {
+            User customer = User.builder()
+                    .fullName("Ananya Sharma")
+                    .email("ananya.sharma@example.com")
+                    .phone("+919876543210")
+                    .passwordHash(passwordEncoder.encode("secretPassword123"))
+                    .role(UserRole.CUSTOMER)
+                    .clusterId(1L)
+                    .isActive(true)
+                    .penaltyCount(0)
+                    .build();
+            userRepository.save(customer);
+            log.info("Seeded default customer user: ananya.sharma@example.com");
         }
     }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Input, Button, Card, Alert } from '../../components/common';
 import { useAuth } from '../../features/auth/useAuth';
 
@@ -55,7 +55,7 @@ export const LoginPage: React.FC = () => {
 
       <Card padding="lg" className="space-y-5">
         {error && (
-          <Alert variant="error" icon={<AlertCircle className="w-4 h-4" />}>
+          <Alert variant="error">
             {error}
           </Alert>
         )}

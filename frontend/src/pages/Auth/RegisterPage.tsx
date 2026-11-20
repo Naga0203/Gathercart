@@ -6,7 +6,6 @@ import {
   Star,
   ArrowRight,
   Sparkles,
-  AlertCircle,
 } from 'lucide-react';
 import { Input, Button, Card, Badge, Alert } from '../../components/common';
 import { useAuth } from '../../features/auth/useAuth';
@@ -252,7 +251,7 @@ export const RegisterPage: React.FC = () => {
             </div>
 
             {error && (
-              <Alert variant="error" icon={<AlertCircle className="w-4 h-4" />}>
+              <Alert variant="error">
                 {error}
               </Alert>
             )}
