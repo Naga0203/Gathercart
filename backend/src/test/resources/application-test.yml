@@ -12,3 +12,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  jwt:
+    secret: test-secret-key-that-is-at-least-256-bits-long-for-hs256-testing
+    expiration-ms: 3600000
