@@ -22,3 +22,4 @@ public class UserProfileResponse {
     private Integer penaltyCount;
     private Boolean isActive;
 }
+

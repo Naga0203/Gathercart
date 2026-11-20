@@ -28,3 +28,4 @@ public class AuthEntryPoint implements AuthenticationEntryPoint {
         objectMapper.writeValue(response.getOutputStream(), body);
     }
 }
+

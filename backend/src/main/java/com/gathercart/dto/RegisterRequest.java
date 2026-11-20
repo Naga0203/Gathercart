@@ -44,3 +44,4 @@ public class RegisterRequest {
     @NotNull(message = "You must agree to the terms")
     private Boolean agreedToTerms;
 }
+

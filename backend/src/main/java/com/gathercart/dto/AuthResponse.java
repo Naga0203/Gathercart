@@ -19,3 +19,4 @@ public class AuthResponse {
     private String clusterName;
     private String token;
 }
+
