@@ -111,7 +111,7 @@ class CartServiceTest {
             return c;
         });
 
-        CartResponse response = cartService.getCart(1L, null, 1L);
+        CartResponse response = cartService.getCart(1L);
 
         assertNotNull(response);
         assertEquals(101L, response.getId());
@@ -138,7 +138,7 @@ class CartServiceTest {
                 .quantity(2)
                 .build();
 
-        CartResponse response = cartService.addToCart(1L, null, 1L, request);
+        CartResponse response = cartService.addToCart(1L, request);
 
         assertNotNull(response);
         assertEquals(1, response.getItemCount());
@@ -179,7 +179,7 @@ class CartServiceTest {
                 .quantity(1)
                 .build();
 
-        CartResponse response = cartService.addToCart(1L, null, 1L, request);
+        CartResponse response = cartService.addToCart(1L, request);
 
         assertEquals(1, response.getItemCount());
         assertEquals(2, response.getTotalItems());
@@ -198,7 +198,7 @@ class CartServiceTest {
                 .quantity(1)
                 .build();
 
-        assertThrows(ResourceNotFoundException.class, () -> cartService.addToCart(1L, null, 1L, request));
+        assertThrows(ResourceNotFoundException.class, () -> cartService.addToCart(1L, request));
     }
 
     @Test
@@ -213,7 +213,7 @@ class CartServiceTest {
                 .quantity(1)
                 .build();
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> cartService.addToCart(1L, null, 1L, request));
+        BusinessException ex = assertThrows(BusinessException.class, () -> cartService.addToCart(1L, request));
         assertTrue(ex.getMessage().contains("unavailable"));
     }
 
@@ -229,7 +229,7 @@ class CartServiceTest {
                 .quantity(5) // Household limit is 3
                 .build();
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> cartService.addToCart(1L, null, 1L, request));
+        BusinessException ex = assertThrows(BusinessException.class, () -> cartService.addToCart(1L, request));
         assertTrue(ex.getMessage().contains("Maximum allowed quantity"));
     }
 
@@ -252,7 +252,7 @@ class CartServiceTest {
                 .quantity(3)
                 .build();
 
-        CartResponse response = cartService.updateQuantity(1L, null, 1L, 201L, request);
+        CartResponse response = cartService.updateQuantity(1L, 201L, request);
 
         assertEquals(3, response.getTotalItems());
         assertEquals(3, item.getQuantity());
@@ -277,7 +277,7 @@ class CartServiceTest {
                 .quantity(0)
                 .build();
 
-        CartResponse response = cartService.updateQuantity(1L, null, 1L, 201L, request);
+        CartResponse response = cartService.updateQuantity(1L, 201L, request);
 
         assertEquals(0, response.getItemCount());
         assertEquals(0, response.getTotalItems());
@@ -298,7 +298,7 @@ class CartServiceTest {
         when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(testCart));
         when(cartRepository.save(any(Cart.class))).thenReturn(testCart);
 
-        CartResponse response = cartService.removeItem(1L, null, 1L, 201L);
+        CartResponse response = cartService.removeItem(1L, 201L);
 
         assertEquals(0, response.getItemCount());
         verify(cartItemRepository).delete(item);
@@ -313,7 +313,7 @@ class CartServiceTest {
         when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(testCart));
         when(cartRepository.save(any(Cart.class))).thenReturn(testCart);
 
-        CartResponse response = cartService.clearCart(1L, null, 1L);
+        CartResponse response = cartService.clearCart(1L);
 
         assertEquals(0, response.getItemCount());
         assertEquals(0, response.getTotalItems());
@@ -334,7 +334,7 @@ class CartServiceTest {
         when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(testCart));
         when(groupPurchaseRepository.findActiveByProductId(1L)).thenReturn(List.of()); // No active batch
 
-        CartResponse response = cartService.getCart(1L, null, 1L);
+        CartResponse response = cartService.getCart(1L);
 
         // Unit Price should be MRP = 850.00
         assertEquals(new BigDecimal("1700.00"), response.getMrpSubtotal());

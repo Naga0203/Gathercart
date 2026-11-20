@@ -197,6 +197,7 @@ class GroupPurchaseServiceTest {
                 .quantity(2)
                 .phone("9876543210")
                 .displayName("Karthik R.")
+                .userId(5L)
                 .build();
 
         when(groupPurchaseRepository.findByIdWithLock(100L)).thenReturn(Optional.of(testGroupPurchase));
@@ -216,6 +217,7 @@ class GroupPurchaseServiceTest {
                 .quantity(2)
                 .phone("9876543210")
                 .displayName("Karthik R.")
+                .userId(5L)
                 .build();
 
         when(groupPurchaseRepository.findByIdWithLock(100L)).thenReturn(Optional.of(testGroupPurchase));
@@ -263,6 +265,7 @@ class GroupPurchaseServiceTest {
         JoinGroupRequest request = JoinGroupRequest.builder()
                 .quantity(1)
                 .phone("9876543210")
+                .userId(5L)
                 .build();
 
         when(groupPurchaseRepository.findByIdWithLock(100L)).thenReturn(Optional.of(testGroupPurchase));
@@ -285,6 +288,7 @@ class GroupPurchaseServiceTest {
                 .quantity(2)
                 .phone("9876543210")
                 .displayName("Ananya Sharma")
+                .userId(5L)
                 .build();
 
         GroupParticipant existingParticipant = GroupParticipant.builder()

@@ -6,15 +6,23 @@ import com.gathercart.dto.AddToCartRequest;
 import com.gathercart.dto.CartItemResponse;
 import com.gathercart.dto.CartResponse;
 import com.gathercart.dto.UpdateCartItemRequest;
+import com.gathercart.entity.User;
+import com.gathercart.entity.UserRole;
 import com.gathercart.exception.GlobalExceptionHandler;
+import com.gathercart.security.CurrentUser;
 import com.gathercart.service.CartService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -30,8 +38,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.gathercart.security.JwtService;
+import org.springframework.security.core.userdetails.UserDetailsService;
+
 @WebMvcTest(controllers = CartController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import({WebConfig.class, GlobalExceptionHandler.class})
+@WithMockUser
 class CartControllerTest {
 
     @Autowired
@@ -42,6 +55,32 @@ class CartControllerTest {
 
     @MockBean
     private CartService cartService;
+
+    @MockBean
+    private CurrentUser currentUser;
+
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private UserDetailsService userDetailsService;
+
+    private User mockUser;
+
+    @BeforeEach
+    void setUp() {
+        mockUser = User.builder()
+                .fullName("Test User")
+                .email("test@gathercart.com")
+                .phone("+919999999999")
+                .role(UserRole.CUSTOMER)
+                .isActive(true)
+                .build();
+        mockUser.setId(1L);
+
+        when(currentUser.require()).thenReturn(mockUser);
+        when(currentUser.get()).thenReturn(mockUser);
+    }
 
     private CartResponse sampleCartResponse() {
         CartItemResponse item = CartItemResponse.builder()
@@ -81,10 +120,9 @@ class CartControllerTest {
     @Test
     @DisplayName("GET /api/v1/cart returns 200 with cart envelope")
     void getCart_returnsCart() throws Exception {
-        when(cartService.getCart(any(), any(), any())).thenReturn(sampleCartResponse());
+        when(cartService.getCart(1L)).thenReturn(sampleCartResponse());
 
-        mockMvc.perform(get("/api/v1/cart")
-                        .header("X-User-Id", 1L))
+        mockMvc.perform(get("/api/v1/cart"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.totalItems").value(2))
@@ -100,13 +138,12 @@ class CartControllerTest {
                 .quantity(2)
                 .build();
 
-        when(cartService.addToCart(any(), any(), any(), any(AddToCartRequest.class)))
+        when(cartService.addToCart(eq(1L), any(AddToCartRequest.class)))
                 .thenReturn(sampleCartResponse());
 
         mockMvc.perform(post("/api/v1/cart/items")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                        .header("X-User-Id", 1L))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.items").isArray());
@@ -134,7 +171,7 @@ class CartControllerTest {
                 .quantity(3)
                 .build();
 
-        when(cartService.updateQuantity(any(), any(), any(), eq(10L), any(UpdateCartItemRequest.class)))
+        when(cartService.updateQuantity(eq(1L), eq(10L), any(UpdateCartItemRequest.class)))
                 .thenReturn(sampleCartResponse());
 
         mockMvc.perform(put("/api/v1/cart/items/10")
@@ -147,7 +184,7 @@ class CartControllerTest {
     @Test
     @DisplayName("DELETE /api/v1/cart/items/{id} returns 200 on remove")
     void removeItem_returnsUpdatedCart() throws Exception {
-        when(cartService.removeItem(any(), any(), any(), eq(10L)))
+        when(cartService.removeItem(eq(1L), eq(10L)))
                 .thenReturn(sampleCartResponse());
 
         mockMvc.perform(delete("/api/v1/cart/items/10"))
@@ -166,7 +203,7 @@ class CartControllerTest {
                 .finalEstimatedTotal(BigDecimal.ZERO)
                 .build();
 
-        when(cartService.clearCart(any(), any(), any()))
+        when(cartService.clearCart(1L))
                 .thenReturn(emptyCart);
 
         mockMvc.perform(delete("/api/v1/cart"))
@@ -175,4 +212,3 @@ class CartControllerTest {
                 .andExpect(jsonPath("$.data.totalItems").value(0));
     }
 }
-
