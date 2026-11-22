@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Clock,
   ArrowRight,
+  Truck,
+  Store,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -21,33 +23,50 @@ import {
   EmptyState,
 } from '../../components/common';
 import { cartService } from '../../services/cartService';
-import type { Cart } from '../../types/cart';
+import type { Cart, FulfillmentType } from '../../types/cart';
 
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState<Cart | null>(null);
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('STORE_PICKUP');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+  const [isUpdatingFulfillment, setIsUpdatingFulfillment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadCart = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await cartService.getCart();
-      setCart(data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load shopping cart';
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadCart();
-  }, [loadCart]);
+    let ignore = false;
+    const fetchCart = async () => {
+      try {
+        const data = await cartService.getCart();
+        if (!ignore) {
+          setCart(data);
+          if (data.fulfillmentType) {
+            setFulfillmentType(data.fulfillmentType);
+          }
+          if (data.deliveryAddress) {
+            setDeliveryAddress(data.deliveryAddress);
+          }
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (!ignore) {
+          const msg = err instanceof Error ? err.message : 'Failed to load shopping cart';
+          setError(msg);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchCart();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
     setIsUpdating(true);
@@ -100,6 +119,31 @@ export const CartPage: React.FC = () => {
     }
   };
 
+  const handleFulfillmentChange = async (type: FulfillmentType, addr?: string) => {
+    setIsUpdatingFulfillment(true);
+    setError(null);
+    try {
+      const addressToUse = addr !== undefined ? addr : deliveryAddress;
+      const updated = await cartService.updateFulfillment({
+        fulfillmentType: type,
+        deliveryAddress: addressToUse,
+      });
+      setCart(updated);
+      setFulfillmentType(type);
+      setSuccessMessage(
+        type === 'STORE_PICKUP'
+          ? 'Switched to Free Store / Hub Pickup'
+          : 'Switched to Home Delivery (extra fee applied)'
+      );
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update fulfillment option';
+      setError(msg);
+    } finally {
+      setIsUpdatingFulfillment(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -132,7 +176,7 @@ export const CartPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <Badge variant="green" size="sm" className="mb-2">
-            INDIRANAGAR BUYING CIRCLE #560038
+            MADHAPUR BUYING CIRCLE #500081 • HYDERABAD
           </Badge>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <ShoppingBag className="w-7 h-7 text-emerald-600 dark:text-emerald-500" />
@@ -230,12 +274,12 @@ export const CartPage: React.FC = () => {
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold border border-emerald-200/60 dark:border-emerald-800">
                           <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                           <span>
-                            Wholesale Pool Active ({item.activeBatchCode || 'Group'}) • Save {item.savingsPercent}%
+                            Bulk Volume Tier • Save {item.savingsPercent}%
                           </span>
                         </div>
                       ) : (
                         <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Direct Catalog Price
+                          Retail Price (Add 5+ units for bulk wholesale discount)
                         </span>
                       )}
                     </div>
@@ -289,7 +333,7 @@ export const CartPage: React.FC = () => {
                     </div>
 
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block">
-                      Max {item.maxAllowedQuantity} units/household
+                      Max {item.maxAllowedQuantity} units/order
                     </span>
                   </div>
                 </div>
@@ -306,8 +350,93 @@ export const CartPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Sticky Pricing Ledger */}
+          {/* Right Column: Sticky Pricing Ledger & Fulfillment Selector */}
           <div className="lg:col-span-4 sticky top-24 space-y-4">
+            {/* Fulfillment Selector Card */}
+            <Card padding="md" className="border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Fulfillment Method
+                </span>
+                <Badge variant={fulfillmentType === 'STORE_PICKUP' ? 'green' : 'blue'} size="sm">
+                  {fulfillmentType === 'STORE_PICKUP' ? 'Free Pickup' : 'Home Delivery'}
+                </Badge>
+              </div>
+
+              {/* Options Switcher */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleFulfillmentChange('STORE_PICKUP')}
+                  disabled={isUpdatingFulfillment}
+                  className={`p-2.5 rounded-xl text-left border transition flex flex-col justify-between cursor-pointer ${
+                    fulfillmentType === 'STORE_PICKUP'
+                      ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <Store className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Store Pickup</span>
+                  </div>
+                  <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 mt-1">
+                    FREE
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleFulfillmentChange('HOME_DELIVERY')}
+                  disabled={isUpdatingFulfillment}
+                  className={`p-2.5 rounded-xl text-left border transition flex flex-col justify-between cursor-pointer ${
+                    fulfillmentType === 'HOME_DELIVERY'
+                      ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs">
+                    <Truck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Home Delivery</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                    Qty &amp; Weight Surcharge
+                  </span>
+                </button>
+              </div>
+
+              {/* Home Delivery Address Input */}
+              {fulfillmentType === 'HOME_DELIVERY' && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2 animate-in fade-in">
+                  <label htmlFor="delivery-address-input" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 block">
+                    Delivery Address:
+                  </label>
+                  <input
+                    id="delivery-address-input"
+                    type="text"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="Flat / house, street, landmark, city"
+                    className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => handleFulfillmentChange('HOME_DELIVERY', deliveryAddress)}
+                    disabled={isUpdatingFulfillment || !deliveryAddress.trim()}
+                  >
+                    Save Delivery Address
+                  </Button>
+                </div>
+              )}
+
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                {fulfillmentType === 'STORE_PICKUP'
+                  ? 'Pickup directly from Madhapur Community Hub at no additional cost.'
+                  : 'Delivered directly to your doorstep. Logistics fee calculated by item quantity and weight.'}
+              </p>
+            </Card>
+
             <Card
               padding="lg"
               className="border border-slate-200 dark:border-slate-800 shadow-sm space-y-5"
@@ -333,7 +462,7 @@ export const CartPage: React.FC = () => {
                 <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-medium">
                   <span className="flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Collective Wholesale Discount:</span>
+                    <span>Volume Wholesale Discount (4%–20%):</span>
                   </span>
                   <span className="font-bold">
                     - ₹{cart.applicableDiscounts.toLocaleString('en-IN')}
@@ -341,9 +470,11 @@ export const CartPage: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                  <span>Community Hub Drop Fee:</span>
+                  <span>
+                    {fulfillmentType === 'STORE_PICKUP' ? 'Store Pickup Fee:' : 'Home Delivery Surcharge:'}
+                  </span>
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {cart.deliveryFee === 0 ? 'FREE' : `₹${cart.deliveryFee}`}
+                    {cart.deliveryFee === 0 ? 'FREE' : `₹${cart.deliveryFee.toLocaleString('en-IN')}`}
                   </span>
                 </div>
 
