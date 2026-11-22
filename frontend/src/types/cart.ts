@@ -1,3 +1,10 @@
+export type FulfillmentType = 'STORE_PICKUP' | 'HOME_DELIVERY';
+
+export interface UpdateFulfillmentPayload {
+  fulfillmentType: FulfillmentType;
+  deliveryAddress?: string;
+}
+
 export interface CartItem {
   id: number;
   productId: number;
@@ -31,6 +38,8 @@ export interface Cart {
   deliveryFee: number;
   finalEstimatedTotal: number;
   deliveryNote: string;
+  fulfillmentType?: FulfillmentType;
+  deliveryAddress?: string | null;
 }
 
 export interface AddToCartPayload {

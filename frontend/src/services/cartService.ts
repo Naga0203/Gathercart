@@ -1,6 +1,6 @@
 import apiClient from './api';
 import type { ApiResponse } from '../types/api';
-import type { Cart, AddToCartPayload, UpdateCartItemPayload } from '../types/cart';
+import type { Cart, AddToCartPayload, UpdateCartItemPayload, UpdateFulfillmentPayload } from '../types/cart';
 
 const CART_UPDATED_EVENT = 'gathercart:cart-updated';
 
@@ -44,6 +44,15 @@ export const cartService = {
     const res = await apiClient.delete<ApiResponse<Cart>>('/cart');
     if (!res.data.data) {
       throw new Error(res.data.message || 'Failed to clear cart');
+    }
+    this.notifyCartUpdated(res.data.data);
+    return res.data.data;
+  },
+
+  async updateFulfillment(payload: UpdateFulfillmentPayload): Promise<Cart> {
+    const res = await apiClient.put<ApiResponse<Cart>>('/cart/fulfillment', payload);
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Failed to update fulfillment method');
     }
     this.notifyCartUpdated(res.data.data);
     return res.data.data;
