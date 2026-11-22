@@ -33,7 +33,7 @@
   - `BigDecimal calculateEffectiveUnitPrice(BigDecimal mrp, BigDecimal vendorCostPrice, int quantity)`
   - `BigDecimal calculateDeliveryFee(FulfillmentType fulfillmentType, List<DeliveryItemSpec> items)`
 
-- [ ] **Step 1: Create `FulfillmentType` enum**
+- [x] **Step 1: Create `FulfillmentType` enum**
 
 Create `backend/src/main/java/com/gathercart/entity/FulfillmentType.java`:
 ```java
@@ -45,7 +45,7 @@ public enum FulfillmentType {
 }
 ```
 
-- [ ] **Step 2: Write failing unit test for `PricingCalculationServiceTest`**
+- [x] **Step 2: Write failing unit test for `PricingCalculationServiceTest`**
 
 Create `backend/src/test/java/com/gathercart/service/PricingCalculationServiceTest.java`:
 ```java
@@ -124,7 +124,7 @@ class PricingCalculationServiceTest {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run:
 ```powershell
@@ -132,7 +132,7 @@ mvn test -Dtest=PricingCalculationServiceTest
 ```
 Expected: Compilation failure or missing class `PricingCalculationService`.
 
-- [ ] **Step 4: Implement `PricingCalculationService`**
+- [x] **Step 4: Implement `PricingCalculationService`**
 
 Create `backend/src/main/java/com/gathercart/service/PricingCalculationService.java`:
 ```java
@@ -207,7 +207,7 @@ public class PricingCalculationService {
 }
 ```
 
-- [ ] **Step 5: Run tests and verify they pass**
+- [x] **Step 5: Run tests and verify they pass**
 
 Run:
 ```powershell
@@ -215,7 +215,7 @@ mvn test -Dtest=PricingCalculationServiceTest
 ```
 Expected: Tests run: 5, Failures: 0, Errors: 0.
 
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
 
 ```powershell
 git add backend/src/main/java/com/gathercart/entity/FulfillmentType.java backend/src/main/java/com/gathercart/service/PricingCalculationService.java backend/src/test/java/com/gathercart/service/PricingCalculationServiceTest.java
@@ -242,7 +242,7 @@ git commit -m "feat(pricing): implement PricingCalculationService with volume di
 - `CartService`:
   - `CartResponse updateFulfillment(Long userId, UpdateFulfillmentRequest request)`
 
-- [ ] **Step 1: Update `Cart.java` and `Product.java`**
+- [x] **Step 1: Update `Cart.java` and `Product.java`**
 
 In `backend/src/main/java/com/gathercart/entity/Cart.java`, add:
 ```java
@@ -261,7 +261,7 @@ In `backend/src/main/java/com/gathercart/entity/Product.java`, add:
     private BigDecimal vendorCostPrice;
 ```
 
-- [ ] **Step 2: Create `UpdateFulfillmentRequest.java` and update `CartResponse.java`**
+- [x] **Step 2: Create `UpdateFulfillmentRequest.java` and update `CartResponse.java`**
 
 Create `backend/src/main/java/com/gathercart/dto/UpdateFulfillmentRequest.java`:
 ```java
@@ -291,7 +291,7 @@ Update `backend/src/main/java/com/gathercart/dto/CartResponse.java` to include:
     private String deliveryAddress;
 ```
 
-- [ ] **Step 3: Update `CartService.java` and `CartServiceImpl.java`**
+- [x] **Step 3: Update `CartService.java` and `CartServiceImpl.java`**
 
 Add method `CartResponse updateFulfillment(Long userId, UpdateFulfillmentRequest request);` to `CartService.java`.
 
@@ -316,7 +316,7 @@ In `CartServiceImpl.java`:
   - Calculate `deliveryFee` using `pricingCalculationService.calculateDeliveryFee(cart.getFulfillmentType(), deliveryItems)`.
   - Update `deliveryNote`: "Free pickup at Madhapur Community Hub" if `STORE_PICKUP`, or "Home delivery to " + address if `HOME_DELIVERY`.
 
-- [ ] **Step 4: Update `CartController.java`**
+- [x] **Step 4: Update `CartController.java`**
 
 In `backend/src/main/java/com/gathercart/controller/CartController.java`, add:
 ```java
@@ -330,7 +330,7 @@ In `backend/src/main/java/com/gathercart/controller/CartController.java`, add:
     }
 ```
 
-- [ ] **Step 5: Run tests to verify backend changes**
+- [x] **Step 5: Run tests to verify backend changes**
 
 Run:
 ```powershell
@@ -338,7 +338,7 @@ mvn test -Dtest=CartControllerTest,PricingCalculationServiceTest
 ```
 Expected: PASS.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```powershell
 git add backend/src/main/java/com/gathercart/
@@ -353,7 +353,7 @@ git commit -m "feat(cart): wire volume pricing and fulfillment selection into Ca
 - Modify: `frontend/src/types/cart.ts`
 - Modify: `frontend/src/services/cartService.ts`
 
-- [ ] **Step 1: Update `frontend/src/types/cart.ts`**
+- [x] **Step 1: Update `frontend/src/types/cart.ts`**
 
 Add `FulfillmentType` and update `Cart`:
 ```typescript
@@ -384,7 +384,7 @@ export interface Cart {
 }
 ```
 
-- [ ] **Step 2: Update `frontend/src/services/cartService.ts`**
+- [x] **Step 2: Update `frontend/src/services/cartService.ts`**
 
 Add `updateFulfillment`:
 ```typescript
@@ -394,7 +394,7 @@ Add `updateFulfillment`:
   },
 ```
 
-- [ ] **Step 3: Run frontend typecheck**
+- [x] **Step 3: Run frontend typecheck**
 
 Run:
 ```powershell
@@ -402,7 +402,7 @@ npm --prefix frontend run build
 ```
 Expected: PASS.
 
-- [ ] **Step 4: Commit Task 3**
+- [x] **Step 4: Commit Task 3**
 
 ```powershell
 git add frontend/src/types/cart.ts frontend/src/services/cartService.ts
@@ -416,7 +416,7 @@ git commit -m "feat(frontend): add fulfillment types and cartService.updateFulfi
 **Files:**
 - Modify: `frontend/src/pages/OfferDetail/OfferDetailPage.tsx`
 
-- [ ] **Step 1: Update quantity selector and tier display in `OfferDetailPage.tsx`**
+- [x] **Step 1: Update quantity selector and tier display in `OfferDetailPage.tsx`**
 
 - Allow `QuantitySelector` to go up to `25` (instead of 3).
 - Add live helper computation:
@@ -426,7 +426,7 @@ git commit -m "feat(frontend): add fulfillment types and cartService.updateFulfi
   - "✓ Free Store Pickup at Community Hub included."
   - "Optional home delivery available at checkout."
 
-- [ ] **Step 2: Verify in browser / build**
+- [x] **Step 2: Verify in browser / build**
 
 Run:
 ```powershell
@@ -434,7 +434,7 @@ npm --prefix frontend run build
 ```
 Expected: PASS.
 
-- [ ] **Step 3: Commit Task 4**
+- [x] **Step 3: Commit Task 4**
 
 ```powershell
 git add frontend/src/pages/OfferDetail/OfferDetailPage.tsx
@@ -448,7 +448,7 @@ git commit -m "feat(offer-detail): support quantity up to 25 with dynamic volume
 **Files:**
 - Modify: `frontend/src/pages/Cart/CartPage.tsx`
 
-- [ ] **Step 1: Add Fulfillment Option Switcher and Address Input in `CartPage.tsx`**
+- [x] **Step 1: Add Fulfillment Option Switcher and Address Input in `CartPage.tsx`**
 
 - Display a tab/toggle:
   - **[ Store / Hub Pickup (FREE) ]**
@@ -460,7 +460,7 @@ git commit -m "feat(offer-detail): support quantity up to 25 with dynamic volume
   - Store Pickup (FREE) or Home Delivery Fee: ₹...
   - Estimated Total: ₹...
 
-- [ ] **Step 2: Verify build**
+- [x] **Step 2: Verify build**
 
 Run:
 ```powershell
@@ -468,7 +468,7 @@ npm --prefix frontend run build
 ```
 Expected: PASS.
 
-- [ ] **Step 3: Commit Task 5**
+- [x] **Step 3: Commit Task 5**
 
 ```powershell
 git add frontend/src/pages/Cart/CartPage.tsx
@@ -479,7 +479,7 @@ git commit -m "feat(cart-page): add fulfillment selector and dynamic delivery su
 
 ### Task 6: Full Verification & Integration Test
 
-- [ ] **Step 1: Run all backend tests**
+- [x] **Step 1: Run all backend tests**
 
 Run:
 ```powershell
@@ -487,10 +487,11 @@ mvn test
 ```
 Expected: All tests pass (0 failures, 0 errors).
 
-- [ ] **Step 2: Run frontend lint and production build**
+- [x] **Step 2: Run frontend lint and production build**
 
 Run:
 ```powershell
 npm --prefix frontend run lint; npm --prefix frontend run build
 ```
 Expected: Lint passes without errors, build succeeds.
+
