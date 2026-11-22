@@ -43,8 +43,104 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Database already seeded with {} products.", productRepository.count());
         }
 
-        if (groupPurchaseRepository.count() == 0) {
-            seedGroupPurchases();
+        syncProductDetailsAndBatches();
+    }
+
+    private void syncProductDetailsAndBatches() {
+        log.info("Syncing product images, Hyderabad clusters, and active batches...");
+        List<Product> products = productRepository.findAll();
+        if (products.isEmpty()) return;
+
+        for (Product product : products) {
+            boolean updated = false;
+            String name = product.getName() != null ? product.getName() : "";
+
+            if (name.contains("Ghee") && (product.getImageUrl() == null || product.getImageUrl().contains("1631451095765"))) {
+                product.setImageUrl("https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            } else if (name.contains("Toor Dal") && (product.getImageUrl() == null || product.getImageUrl().contains("1546069901"))) {
+                product.setImageUrl("https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            } else if (name.contains("Mango Pulp") && (product.getImageUrl() == null || product.getImageUrl().contains("1553279768"))) {
+                product.setImageUrl("https://images.unsplash.com/photo-1591073113125-e46713c829ed?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            } else if (name.contains("Groundnut Oil") && product.getImageUrl() == null) {
+                product.setImageUrl("https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            } else if (name.contains("Walnuts") && product.getImageUrl() == null) {
+                product.setImageUrl("https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            } else if (name.contains("Sona Masoori") && product.getImageUrl() == null) {
+                product.setImageUrl("https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=1200&q=80");
+                updated = true;
+            }
+
+            if (updated) {
+                productRepository.save(product);
+                log.info("Updated product image for: {}", product.getName());
+            }
+
+            // Ensure an active batch exists for this product in Hyderabad
+            List<com.gathercart.entity.GroupPurchase> existingBatches = groupPurchaseRepository.findActiveByProductId(product.getId());
+            if (existingBatches.isEmpty()) {
+                int targetQty = 25;
+                int currentQty = 15;
+                String batchCode = "HYD-" + (400 + product.getId().intValue());
+
+                if (name.contains("Mango Pulp")) {
+                    targetQty = 25;
+                    currentQty = 20; // 80% met as expected
+                    batchCode = "HYD-406";
+                } else if (name.contains("Ghee")) {
+                    targetQty = 15;
+                    currentQty = 12; // 80% met
+                    batchCode = "HYD-405";
+                } else if (name.contains("Toor Dal")) {
+                    targetQty = 25;
+                    currentQty = 14;
+                    batchCode = "HYD-404";
+                } else if (name.contains("Walnuts")) {
+                    targetQty = 20;
+                    currentQty = 8;
+                    batchCode = "HYD-403";
+                } else if (name.contains("Oil")) {
+                    targetQty = 15;
+                    currentQty = 11;
+                    batchCode = "HYD-402";
+                } else if (name.contains("Rice")) {
+                    targetQty = 25;
+                    currentQty = 18;
+                    batchCode = "HYD-401";
+                }
+
+                com.gathercart.entity.GroupPurchase batch = com.gathercart.entity.GroupPurchase.builder()
+                        .batchCode(batchCode)
+                        .product(product)
+                        .clusterName("Madhapur, Hyderabad")
+                        .targetQuantity(targetQty)
+                        .currentQuantity(currentQty)
+                        .householdLimit(3)
+                        .status(com.gathercart.entity.GroupPurchaseStatus.OPEN)
+                        .deadline(java.time.LocalDateTime.now().plusDays(4))
+                        .paymentWindowMins(120)
+                        .leadOrganiser("Coordinator Ananya S. (Cyber Towers Hub)")
+                        .hubDropLocation("Madhapur Community Hub – Gate 1, Near Cyber Towers, Hyderabad")
+                        .isFreeDelivery(true)
+                        .build();
+
+                groupPurchaseRepository.save(batch);
+                log.info("Provisioned active Hyderabad batch {} for product {}", batchCode, product.getName());
+            } else {
+                // Update cluster details on existing batches
+                for (com.gathercart.entity.GroupPurchase batch : existingBatches) {
+                    if (batch.getClusterName() == null || batch.getClusterName().contains("Indiranagar")) {
+                        batch.setClusterName("Madhapur, Hyderabad");
+                        batch.setHubDropLocation("Madhapur Community Hub – Gate 1, Near Cyber Towers, Hyderabad");
+                        batch.setLeadOrganiser("Coordinator Ananya S. (Cyber Towers Hub)");
+                        groupPurchaseRepository.save(batch);
+                    }
+                }
+            }
         }
     }
 
@@ -264,7 +360,7 @@ public class DataInitializer implements CommandLineRunner {
                 .unitWeightKg(new BigDecimal("5.00"))
                 .mrp(new BigDecimal("900.00"))
                 .groupPrice(new BigDecimal("720.00"))
-                .imageUrl("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80")
+                .imageUrl("https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&w=1200&q=80")
                 .isLabVerified(true)
                 .isPesticideTested(true)
                 .harvestDate("Dec 2023")
@@ -286,7 +382,7 @@ public class DataInitializer implements CommandLineRunner {
                 .unitWeightKg(new BigDecimal("0.91"))
                 .mrp(new BigDecimal("2400.00"))
                 .groupPrice(new BigDecimal("1850.00"))
-                .imageUrl("https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?auto=format&fit=crop&w=1200&q=80")
+                .imageUrl("https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=1200&q=80")
                 .isLabVerified(true)
                 .isPesticideTested(true)
                 .harvestDate("Feb 2024")
@@ -308,7 +404,7 @@ public class DataInitializer implements CommandLineRunner {
                 .unitWeightKg(new BigDecimal("5.10"))
                 .mrp(new BigDecimal("1600.00"))
                 .groupPrice(new BigDecimal("1190.00"))
-                .imageUrl("https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=1200&q=80")
+                .imageUrl("https://images.unsplash.com/photo-1591073113125-e46713c829ed?auto=format&fit=crop&w=1200&q=80")
                 .isLabVerified(false)
                 .isPesticideTested(true)
                 .harvestDate("May 2024")

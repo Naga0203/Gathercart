@@ -53,6 +53,9 @@ class CartServiceTest {
     @Mock
     private GroupPurchaseRepository groupPurchaseRepository;
 
+    @org.mockito.Spy
+    private PricingCalculationService pricingCalculationService = new PricingCalculationService();
+
     @InjectMocks
     private CartServiceImpl cartService;
 
@@ -135,27 +138,26 @@ class CartServiceTest {
 
         AddToCartRequest request = AddToCartRequest.builder()
                 .productId(1L)
-                .quantity(2)
+                .quantity(5)
                 .build();
 
         CartResponse response = cartService.addToCart(1L, request);
 
         assertNotNull(response);
         assertEquals(1, response.getItemCount());
-        assertEquals(2, response.getTotalItems());
+        assertEquals(5, response.getTotalItems());
 
-        // MRP = 850 * 2 = 1700
-        assertEquals(new BigDecimal("1700.00"), response.getMrpSubtotal());
-        // Applied Group Price = 649 * 2 = 1298
-        assertEquals(new BigDecimal("1298.00"), response.getSubtotal());
-        // Savings = 1700 - 1298 = 402
-        assertEquals(new BigDecimal("402.00"), response.getEstimatedSavings());
-        assertEquals(new BigDecimal("402.00"), response.getApplicableDiscounts());
-        assertEquals(new BigDecimal("1298.00"), response.getFinalEstimatedTotal());
+        // MRP = 850 * 5 = 4250.00
+        assertEquals(new BigDecimal("4250.00"), response.getMrpSubtotal());
+        // Applied Unit Price with 4% discount = 816.00, subtotal = 4080.00
+        assertEquals(new BigDecimal("4080.00"), response.getSubtotal());
+        // Savings = 4250 - 4080 = 170.00
+        assertEquals(new BigDecimal("170.00"), response.getEstimatedSavings());
+        assertEquals(new BigDecimal("170.00"), response.getApplicableDiscounts());
+        assertEquals(new BigDecimal("4080.00"), response.getFinalEstimatedTotal());
 
         assertTrue(response.getItems().get(0).getIsGroupPriceApplied());
-        assertEquals("IND-409", response.getItems().get(0).getActiveBatchCode());
-        assertEquals(24, response.getItems().get(0).getSavingsPercent());
+        assertEquals(4, response.getItems().get(0).getSavingsPercent());
     }
 
     @Test
@@ -222,11 +224,10 @@ class CartServiceTest {
     void addToCart_quantityExceedsLimit_throwsException() {
         when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(testCart));
         when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
-        when(groupPurchaseRepository.findActiveByProductId(1L)).thenReturn(List.of(testGroupPurchase));
 
         AddToCartRequest request = AddToCartRequest.builder()
                 .productId(1L)
-                .quantity(5) // Household limit is 3
+                .quantity(26) // Limit is 25
                 .build();
 
         BusinessException ex = assertThrows(BusinessException.class, () -> cartService.addToCart(1L, request));
@@ -341,6 +342,33 @@ class CartServiceTest {
         assertEquals(new BigDecimal("1700.00"), response.getSubtotal());
         assertEquals(new BigDecimal("0.00"), response.getEstimatedSavings());
         assertFalse(response.getItems().get(0).getIsGroupPriceApplied());
+    }
+
+    @Test
+    @DisplayName("updateFulfillment - updates fulfillment type to HOME_DELIVERY and recalculates delivery fee")
+    void updateFulfillment_homeDelivery_calculatesFee() {
+        CartItem item = CartItem.builder()
+                .cart(testCart)
+                .product(testProduct)
+                .quantity(5)
+                .build();
+        item.setId(201L);
+        testCart.addItem(item);
+
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(testCart));
+        when(cartRepository.save(any(Cart.class))).thenReturn(testCart);
+
+        com.gathercart.dto.UpdateFulfillmentRequest request = com.gathercart.dto.UpdateFulfillmentRequest.builder()
+                .fulfillmentType(com.gathercart.entity.FulfillmentType.HOME_DELIVERY)
+                .deliveryAddress("Flat 101, Palm Grove, Madhapur, Hyderabad")
+                .build();
+
+        CartResponse response = cartService.updateFulfillment(1L, request);
+
+        assertNotNull(response);
+        assertEquals(com.gathercart.entity.FulfillmentType.HOME_DELIVERY, response.getFulfillmentType());
+        // Base fee: 40 + (5 * 10kg * 10) = 40 + 500 = 540.00
+        assertEquals(new BigDecimal("540.00"), response.getDeliveryFee());
     }
 }
 

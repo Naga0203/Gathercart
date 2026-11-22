@@ -3,6 +3,8 @@ package com.gathercart.entity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -34,6 +36,14 @@ public class Cart extends BaseEntity {
     @Column(name = "cluster_id", nullable = false)
     @Builder.Default
     private Long clusterId = 1L;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fulfillment_type", length = 30)
+    @Builder.Default
+    private FulfillmentType fulfillmentType = FulfillmentType.STORE_PICKUP;
+
+    @Column(name = "delivery_address", length = 500)
+    private String deliveryAddress;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")

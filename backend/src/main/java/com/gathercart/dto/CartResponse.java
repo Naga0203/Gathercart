@@ -1,5 +1,6 @@
 package com.gathercart.dto;
 
+import com.gathercart.entity.FulfillmentType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,5 +34,7 @@ public class CartResponse {
     private BigDecimal deliveryFee;
     private BigDecimal finalEstimatedTotal;
     private String deliveryNote;
+    private FulfillmentType fulfillmentType;
+    private String deliveryAddress;
 }
 

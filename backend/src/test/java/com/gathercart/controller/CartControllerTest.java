@@ -211,4 +211,29 @@ class CartControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.totalItems").value(0));
     }
+
+    @Test
+    @DisplayName("PUT /api/v1/cart/fulfillment updates fulfillment method")
+    void updateFulfillment_success() throws Exception {
+        com.gathercart.dto.UpdateFulfillmentRequest request = com.gathercart.dto.UpdateFulfillmentRequest.builder()
+                .fulfillmentType(com.gathercart.entity.FulfillmentType.HOME_DELIVERY)
+                .deliveryAddress("Madhapur, Hyderabad")
+                .build();
+
+        CartResponse response = sampleCartResponse();
+        response.setFulfillmentType(com.gathercart.entity.FulfillmentType.HOME_DELIVERY);
+        response.setDeliveryAddress("Madhapur, Hyderabad");
+        response.setDeliveryFee(new BigDecimal("60.00"));
+
+        when(cartService.updateFulfillment(eq(1L), any(com.gathercart.dto.UpdateFulfillmentRequest.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/v1/cart/fulfillment")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.fulfillmentType").value("HOME_DELIVERY"))
+                .andExpect(jsonPath("$.data.deliveryAddress").value("Madhapur, Hyderabad"));
+    }
 }

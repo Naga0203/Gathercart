@@ -30,3 +30,4 @@ public class CurrentUser {
         return user;
     }
 }
+

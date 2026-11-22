@@ -73,3 +73,4 @@ class JwtServiceTest {
         assertFalse(jwtService.isTokenValid("not-a-valid-jwt", userDetails));
     }
 }
+

@@ -15,4 +15,6 @@ public interface CartService {
     CartResponse removeItem(Long userId, Long itemId);
 
     CartResponse clearCart(Long userId);
+
+    CartResponse updateFulfillment(Long userId, com.gathercart.dto.UpdateFulfillmentRequest request);
 }

@@ -18,7 +18,6 @@ public class JoinGroupRequest {
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 
-    @NotBlank(message = "Phone number is required")
     private String phone;
 
     private String displayName;

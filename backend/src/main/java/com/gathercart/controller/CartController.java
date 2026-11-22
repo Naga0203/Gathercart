@@ -67,4 +67,13 @@ public class CartController {
         CartResponse response = cartService.clearCart(userId);
         return ResponseEntity.ok(ApiResponse.success(response, "Cart cleared successfully"));
     }
+
+    @PutMapping("/fulfillment")
+    public ResponseEntity<ApiResponse<CartResponse>> updateFulfillment(
+            @Valid @RequestBody com.gathercart.dto.UpdateFulfillmentRequest request
+    ) {
+        Long userId = currentUser.require().getId();
+        CartResponse response = cartService.updateFulfillment(userId, request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Fulfillment updated successfully"));
+    }
 }

@@ -200,3 +200,4 @@ class AuthControllerTest {
                 .andExpect(status().isOk());
     }
 }
+

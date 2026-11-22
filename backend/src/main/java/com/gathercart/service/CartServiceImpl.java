@@ -4,8 +4,10 @@ import com.gathercart.dto.AddToCartRequest;
 import com.gathercart.dto.CartItemResponse;
 import com.gathercart.dto.CartResponse;
 import com.gathercart.dto.UpdateCartItemRequest;
+import com.gathercart.dto.UpdateFulfillmentRequest;
 import com.gathercart.entity.Cart;
 import com.gathercart.entity.CartItem;
+import com.gathercart.entity.FulfillmentType;
 import com.gathercart.entity.GroupPurchase;
 import com.gathercart.entity.GroupPurchaseStatus;
 import com.gathercart.entity.Product;
@@ -37,9 +39,10 @@ public class CartServiceImpl implements CartService {
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final GroupPurchaseRepository groupPurchaseRepository;
+    private final PricingCalculationService pricingCalculationService;
 
     private static final Long DEFAULT_CLUSTER_ID = 1L;
-    private static final String DEFAULT_DELIVERY_NOTE = "Free pickup at Indiranagar Community Hub";
+    private static final String DEFAULT_DELIVERY_NOTE = "Free pickup at Madhapur Community Hub, Hyderabad (Thu 4:00 PM – 7:00 PM)";
 
     @Override
     @Transactional(readOnly = true)
@@ -150,19 +153,28 @@ public class CartServiceImpl implements CartService {
         return mapToCartResponse(cart);
     }
 
+    @Override
+    public CartResponse updateFulfillment(Long userId, UpdateFulfillmentRequest request) {
+        Cart cart = getOrCreateCart(userId);
+        cart.setFulfillmentType(request.getFulfillmentType());
+        if (request.getFulfillmentType() == FulfillmentType.HOME_DELIVERY) {
+            cart.setDeliveryAddress(request.getDeliveryAddress());
+        }
+        cartRepository.save(cart);
+        return mapToCartResponse(cart);
+    }
+
     private Cart getOrCreateCart(Long userId) {
         return cartRepository.findByUserId(userId)
                 .orElseGet(() -> cartRepository.save(Cart.builder()
                         .userId(userId)
                         .clusterId(DEFAULT_CLUSTER_ID)
+                        .fulfillmentType(FulfillmentType.STORE_PICKUP)
                         .build()));
     }
 
     private int resolveMaxAllowedQuantity(Product product) {
-        Optional<GroupPurchase> activeBatch = findActiveGroupPurchase(product.getId());
-        return activeBatch
-                .map(GroupPurchase::getHouseholdLimit)
-                .orElse(3);
+        return 25;
     }
 
     private Optional<GroupPurchase> findActiveGroupPurchase(Long productId) {
@@ -175,6 +187,7 @@ public class CartServiceImpl implements CartService {
 
     private CartResponse mapToCartResponse(Cart cart) {
         List<CartItemResponse> itemResponses = new ArrayList<>();
+        List<PricingCalculationService.DeliveryItemSpec> deliverySpecs = new ArrayList<>();
         BigDecimal mrpSubtotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         BigDecimal subtotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         int totalItems = 0;
@@ -183,15 +196,16 @@ public class CartServiceImpl implements CartService {
             Product product = item.getProduct();
             int qty = item.getQuantity();
             totalItems += qty;
+            deliverySpecs.add(new PricingCalculationService.DeliveryItemSpec(qty, product.getUnitWeightKg()));
 
             BigDecimal mrpUnit = product.getMrp().setScale(2, RoundingMode.HALF_UP);
             Optional<GroupPurchase> activeBatch = findActiveGroupPurchase(product.getId());
 
-            boolean isGroupApplied = activeBatch.isPresent();
-            String batchCode = activeBatch.map(GroupPurchase::getBatchCode).orElse(null);
-            BigDecimal appliedUnit = isGroupApplied
-                    ? product.getGroupPrice().setScale(2, RoundingMode.HALF_UP)
-                    : mrpUnit;
+            BigDecimal appliedUnit = pricingCalculationService.calculateEffectiveUnitPrice(
+                    mrpUnit, product.getVendorCostPrice(), qty
+            );
+            boolean isGroupApplied = qty >= 5;
+            String batchCode = activeBatch.map(GroupPurchase::getBatchCode).orElse("DIRECT-TIER");
 
             BigDecimal itemMrpTotal = mrpUnit.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
             BigDecimal itemSub = appliedUnit.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
@@ -229,9 +243,14 @@ public class CartServiceImpl implements CartService {
         }
 
         BigDecimal applicableDiscounts = mrpSubtotal.subtract(subtotal).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal deliveryFee = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        FulfillmentType fulfillmentType = cart.getFulfillmentType() != null ? cart.getFulfillmentType() : FulfillmentType.STORE_PICKUP;
+        BigDecimal deliveryFee = pricingCalculationService.calculateDeliveryFee(fulfillmentType, deliverySpecs);
         BigDecimal estimatedSavings = applicableDiscounts;
         BigDecimal finalEstimatedTotal = subtotal.add(deliveryFee).setScale(2, RoundingMode.HALF_UP);
+
+        String deliveryNote = (fulfillmentType == FulfillmentType.HOME_DELIVERY)
+                ? "Home delivery to " + (cart.getDeliveryAddress() != null && !cart.getDeliveryAddress().isBlank() ? cart.getDeliveryAddress() : "your address")
+                : DEFAULT_DELIVERY_NOTE;
 
         return CartResponse.builder()
                 .id(cart.getId())
@@ -247,7 +266,9 @@ public class CartServiceImpl implements CartService {
                 .estimatedSavings(estimatedSavings)
                 .deliveryFee(deliveryFee)
                 .finalEstimatedTotal(finalEstimatedTotal)
-                .deliveryNote(DEFAULT_DELIVERY_NOTE)
+                .deliveryNote(deliveryNote)
+                .fulfillmentType(fulfillmentType)
+                .deliveryAddress(cart.getDeliveryAddress())
                 .build();
     }
 }

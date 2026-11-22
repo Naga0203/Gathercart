@@ -40,9 +40,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
-                        .requestMatchers("/api/v1/health", "/api/v1/").permitAll()
+                        .requestMatchers("/api/v1/health", "/health", "/api/v1/", "/").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers("/api/v1/batches/my-pledges", "/api/v1/group-purchases/my-pledges").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/batches/**", "/api/v1/group-purchases/**").permitAll()
 
                         // Admin-only endpoints
