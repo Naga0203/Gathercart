@@ -154,3 +154,4 @@ flowchart TD
 3. **Full Integration & Frontend Verification:**
    - Run backend tests: `mvn clean test`
    - Run frontend tests & build: `npm run lint && npm run build`
+

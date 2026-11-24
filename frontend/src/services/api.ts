@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { API_BASE_URL } from '../config/constants';
 import type { ApiResponse } from '../types/api';
-import { getAuthToken } from '../features/auth/AuthContext';
+import { getAuthToken } from '../features/auth/tokenStorage';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

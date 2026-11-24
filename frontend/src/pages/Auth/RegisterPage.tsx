@@ -55,7 +55,7 @@ export const RegisterPage: React.FC = () => {
           password,
           clusterId: 1,
           addressLine1: addressLine1.trim(),
-          addressLine2: '5th Cross, Indiranagar, Bengaluru – 560038',
+          addressLine2: 'Hitec City Road, Madhapur, Hyderabad – 500081',
           handoverPreference,
           preferredPickupNodeId: 1,
           agreedToTerms: true,
@@ -118,7 +118,7 @@ export const RegisterPage: React.FC = () => {
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-3">
             <Badge variant="outline-green" size="md">
-              Indiranagar Cooperative
+              Madhapur Cooperative • Hyderabad
             </Badge>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -126,7 +126,7 @@ export const RegisterPage: React.FC = () => {
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Bypass retail middlemen. Join your local apartment and street clusters across Indiranagar to unlock genuine mill-gate pricing.
+              Bypass retail middlemen. Join your local apartment and street clusters across Madhapur, Hyderabad to unlock genuine mill-gate pricing.
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export const RegisterPage: React.FC = () => {
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white">Consolidated neighborhood delivery</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Single truck delivery directly to Indiranagar Club or dropped at your apartment lobby.
+                  Single truck delivery directly to Madhapur Community Hub or dropped at your apartment lobby.
                 </p>
               </div>
             </div>
@@ -241,7 +241,7 @@ export const RegisterPage: React.FC = () => {
 
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {activeTab === 'register' ? 'Join the Indiranagar Cluster' : 'Welcome back to NeighbourBuy'}
+                {activeTab === 'register' ? 'Join the Madhapur Cluster, Hyderabad' : 'Welcome back to NeighbourBuy'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {activeTab === 'register'
@@ -316,7 +316,7 @@ export const RegisterPage: React.FC = () => {
                       type="text"
                       readOnly
                       className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-4 py-2 text-xs text-slate-600 dark:text-slate-400"
-                      value="5th Cross, Indiranagar, Bengaluru – 560038"
+                      value="Hitec City Road, Madhapur, Hyderabad – 500081"
                     />
                   </div>
 
@@ -343,7 +343,7 @@ export const RegisterPage: React.FC = () => {
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 dark:text-white">
-                            Indiranagar Club Gate 2
+                            Madhapur Community Hub – Gate 1
                           </div>
                           <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
                             Free Community Pickup
@@ -394,7 +394,7 @@ export const RegisterPage: React.FC = () => {
                       className="mt-1 rounded-sm text-emerald-600 focus:ring-emerald-500"
                     />
                     <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-normal cursor-pointer">
-                      I agree to participate in the Indiranagar buying cluster. I understand that payment is collected via UPI only after the mill order is confirmed.
+                      I agree to participate in the Madhapur, Hyderabad buying cluster. I understand that payment is collected via UPI only after the mill order is confirmed.
                     </label>
                   </div>
                 </>
@@ -444,14 +444,14 @@ export const RegisterPage: React.FC = () => {
           <Card padding="md" className="space-y-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">When do I actually pay?</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Never upfront. When our Indiranagar quota hits 100%, an official UPI payment link is dispatched via WhatsApp. You pay only after the mill dispatches the batch.
+              Never upfront. When our Madhapur quota hits 100%, an official UPI payment link is dispatched via WhatsApp. You pay only after the mill dispatches the batch.
             </p>
           </Card>
 
           <Card padding="md" className="space-y-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">How do I collect my 50 kg rice?</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              You can pick it up directly at the Indiranagar Club distribution point using your unique QR token, or opt for a building guard drop-off handled by our logistics partner.
+              You can pick it up directly at the Madhapur Community Hub distribution point using your unique QR token, or opt for a building guard drop-off handled by our logistics partner.
             </p>
           </Card>
 

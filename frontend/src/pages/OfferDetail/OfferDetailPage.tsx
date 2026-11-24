@@ -658,9 +658,16 @@ export const OfferDetailPage: React.FC = () => {
                 </Alert>
               )}
               {cartSuccess && (
-                <Alert variant="success" className="text-xs" onDismiss={() => setCartSuccess(null)}>
-                  {cartSuccess}
-                </Alert>
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                    {cartSuccess}
+                  </span>
+                  <Link to="/cart">
+                    <Button variant="primary" size="sm" className="text-xs">
+                      View Cart &amp; Checkout →
+                    </Button>
+                  </Link>
+                </div>
               )}
 
               {/* Action Buttons: Add to Cart and Pledge */}

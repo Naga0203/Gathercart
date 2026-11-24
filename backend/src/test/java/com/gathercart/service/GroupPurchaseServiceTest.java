@@ -57,6 +57,9 @@ class GroupPurchaseServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @org.mockito.Spy
+    private PricingCalculationService pricingCalculationService = new PricingCalculationService();
+
     @InjectMocks
     private GroupPurchaseService groupPurchaseService;
 

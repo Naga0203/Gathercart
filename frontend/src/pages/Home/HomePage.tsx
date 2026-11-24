@@ -26,7 +26,9 @@ import {
 } from '../../components/common';
 import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
+import { batchService } from '../../services/batchService';
 import type { ProductSummary, Category, ProductQueryParams } from '../../types/product';
+import type { BatchResponse } from '../../types/batch';
 import type { PagedResponse } from '../../types/api';
 
 export const HomePage: React.FC = () => {
@@ -49,8 +51,33 @@ export const HomePage: React.FC = () => {
     last: true,
   });
 
+  // Active batches mapped by productId
+  const [batchesByProduct, setBatchesByProduct] = useState<Record<number, BatchResponse>>({});
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Load active batches for progress indicators
+  useEffect(() => {
+    let ignore = false;
+    batchService
+      .getBatches({ status: 'OPEN', size: 50 })
+      .then((res) => {
+        if (!ignore && res?.content) {
+          const map: Record<number, BatchResponse> = {};
+          for (const b of res.content) {
+            if (b.product?.id) {
+              map[b.product.id] = b;
+            }
+          }
+          setBatchesByProduct(map);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Debounce search input by 350ms
   useEffect(() => {
@@ -76,8 +103,6 @@ export const HomePage: React.FC = () => {
   // Fetch Products
   const fetchProducts = useCallback(
     async (pageToLoad = 0) => {
-      setIsLoading(true);
-      setError(null);
       try {
         const [sortBy, sortDir] = sortOption.split(',') as [string, 'asc' | 'desc'];
         const params: ProductQueryParams = {
@@ -97,6 +122,7 @@ export const HomePage: React.FC = () => {
 
         const result = await productService.getProducts(params);
         setProductsPage(result);
+        setError(null);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unable to connect to product service';
         setError(message);
@@ -108,13 +134,63 @@ export const HomePage: React.FC = () => {
   );
 
   useEffect(() => {
-    fetchProducts(0);
-  }, [fetchProducts]);
+    let ignore = false;
+    const loadProducts = async () => {
+      try {
+        const [sortBy, sortDir] = sortOption.split(',') as [string, 'asc' | 'desc'];
+        const params: ProductQueryParams = {
+          page: 0,
+          size: 12,
+          sortBy,
+          sortDir,
+        };
+
+        if (selectedCategoryId !== null) {
+          params.categoryId = selectedCategoryId;
+        }
+
+        if (debouncedSearch.trim()) {
+          params.search = debouncedSearch.trim();
+        }
+
+        const result = await productService.getProducts(params);
+        if (!ignore) {
+          setProductsPage(result);
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : 'Unable to connect to product service';
+          setError(message);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadProducts();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedCategoryId, debouncedSearch, sortOption]);
+
+  const handleCategorySelect = (categoryId: number | null) => {
+    setIsLoading(true);
+    setSelectedCategoryId(categoryId);
+  };
 
   const handleResetFilters = () => {
+    setIsLoading(true);
     setSelectedCategoryId(null);
     setSearchTerm('');
     setSortOption('id,desc');
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setIsLoading(true);
+    fetchProducts(newPage);
   };
 
   return (
@@ -123,15 +199,15 @@ export const HomePage: React.FC = () => {
       <div className="relative rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50/40 to-slate-50 dark:from-emerald-950/40 dark:via-slate-900 dark:to-slate-950 p-6 sm:p-10 border border-emerald-100/80 dark:border-emerald-900/40 shadow-xs">
         <div className="max-w-3xl space-y-4">
           <Badge variant="outline-green" size="md" icon={<ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400" />}>
-            VERIFIED COOPERATIVE HUB
+            VERIFIED COOPERATIVE HUB • HYDERABAD
           </Badge>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Neighbourhood Group Offers in Indiranagar, Bengaluru
+            Neighbourhood Group Offers in Madhapur, Hyderabad
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-            Join bulk wholesale buys with neighbours in your locality. Real products sourced directly from regional APMC co-ops and farmer producer mills.
+            Join bulk wholesale buys with neighbours in your locality across Madhapur, Hitec City, and Gachibowli. Real products sourced directly from regional APMC co-ops and farmer producer mills.
           </p>
 
           {/* 3 Value Propositions */}
@@ -217,7 +293,7 @@ export const HomePage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             <button
-              onClick={() => setSelectedCategoryId(null)}
+              onClick={() => handleCategorySelect(null)}
               className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                 selectedCategoryId === null
                   ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
@@ -230,7 +306,7 @@ export const HomePage: React.FC = () => {
             {categories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategoryId(cat.id)}
+                onClick={() => handleCategorySelect(cat.id)}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                   selectedCategoryId === cat.id
                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700 shadow-2xs'
@@ -263,7 +339,10 @@ export const HomePage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchProducts(productsPage.page)}
+              onClick={() => {
+                setIsLoading(true);
+                fetchProducts(productsPage.page);
+              }}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
             >
               Retry Connection
@@ -385,25 +464,41 @@ export const HomePage: React.FC = () => {
                     />
 
                     {/* Progress & Value Hint */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-slate-700 dark:text-slate-300">
-                          Bulk Wholesale Batch
-                        </span>
-                        <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                          Direct Mill Price
-                        </span>
-                      </div>
+                    {(() => {
+                      const activeBatch = batchesByProduct[product.id];
+                      const currentQty = activeBatch ? activeBatch.currentQuantity : 0;
+                      const targetQty = activeBatch ? activeBatch.targetQuantity : 25;
+                      const progressPct = activeBatch
+                        ? activeBatch.progressPercent
+                        : Math.min(100, Math.round((currentQty / targetQty) * 100));
 
-                      <ProgressBar current={18} total={25} variant="emerald" />
+                      return (
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-center justify-between text-xs font-semibold">
+                            <span className="text-slate-700 dark:text-slate-300">
+                              {activeBatch ? `Batch #${activeBatch.batchCode}` : 'Bulk Wholesale Batch'}
+                            </span>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                              {progressPct}% Target Reached
+                            </span>
+                          </div>
 
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                        <span className="truncate">
-                          Save ₹{product.savingsAmount.toFixed(0)} vs local retail store
-                        </span>
-                      </div>
-                    </div>
+                          <ProgressBar current={currentQty} total={targetQty} variant="emerald" />
+
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                            <span className="truncate">
+                              Save ₹{product.savingsAmount.toFixed(0)} vs local retail store
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[10px] text-emerald-800 dark:text-emerald-300 font-semibold bg-emerald-50/80 dark:bg-emerald-950/40 px-2 py-1 rounded-md border border-emerald-100 dark:border-emerald-900/60 mt-1">
+                            <span>📦 Tiered Bulk: 4%–20% off (5–25 units)</span>
+                            <span>Free Pickup</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -438,7 +533,7 @@ export const HomePage: React.FC = () => {
               variant="outline"
               size="sm"
               disabled={productsPage.page === 0}
-              onClick={() => fetchProducts(productsPage.page - 1)}
+              onClick={() => handlePageChange(productsPage.page - 1)}
               leftIcon={<ChevronLeft className="w-4 h-4" />}
             >
               Previous
@@ -448,7 +543,7 @@ export const HomePage: React.FC = () => {
               variant="outline"
               size="sm"
               disabled={productsPage.last || productsPage.page + 1 >= productsPage.totalPages}
-              onClick={() => fetchProducts(productsPage.page + 1)}
+              onClick={() => handlePageChange(productsPage.page + 1)}
               rightIcon={<ChevronRight className="w-4 h-4" />}
             >
               Next
@@ -465,10 +560,10 @@ export const HomePage: React.FC = () => {
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              Want to propose an item for Indiranagar?
+              Want to propose an item for Hyderabad?
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Request a wholesale bulk slot for your apartment building or street association.
+              Request a wholesale bulk slot for your apartment building or community association in Madhapur or Gachibowli.
             </p>
           </div>
         </div>

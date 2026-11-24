@@ -143,3 +143,4 @@ All security requirements are verified via automated tests:
   - Role-based access control blocking customer from `/admin/products` (`403 Forbidden`).
   - Unauthenticated access to `/cart` blocked (`401 Unauthorized`).
   - Public endpoints accessible without credentials (`/health`, `/products`, `/categories`).
+

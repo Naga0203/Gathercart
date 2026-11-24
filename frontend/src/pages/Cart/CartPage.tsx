@@ -23,6 +23,7 @@ import {
   EmptyState,
 } from '../../components/common';
 import { cartService } from '../../services/cartService';
+import { orderService } from '../../services/orderService';
 import type { Cart, FulfillmentType } from '../../types/cart';
 
 export const CartPage: React.FC = () => {
@@ -33,6 +34,7 @@ export const CartPage: React.FC = () => {
   const [isUpdatingFulfillment, setIsUpdatingFulfillment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -141,6 +143,28 @@ export const CartPage: React.FC = () => {
       setError(msg);
     } finally {
       setIsUpdatingFulfillment(false);
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (fulfillmentType === 'HOME_DELIVERY' && (!deliveryAddress || !deliveryAddress.trim())) {
+      setError('Please provide a delivery address for Home Delivery before checking out.');
+      return;
+    }
+
+    setIsCheckingOut(true);
+    setError(null);
+    try {
+      const order = await orderService.checkout();
+      setCart(null);
+      navigate(`/orders/${order.id}`, {
+        state: { orderSuccess: true, orderNumber: order.orderNumber },
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to place order. Please try again.';
+      setError(msg);
+    } finally {
+      setIsCheckingOut(false);
     }
   };
 
@@ -515,16 +539,16 @@ export const CartPage: React.FC = () => {
               </div>
 
               {/* Action Button */}
-              <Link to="/orders" className="block">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="w-full text-sm sm:text-base font-bold py-3.5 shadow-sm"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
-                >
-                  View Buying Circle Orders
-                </Button>
-              </Link>
+              <Button
+                variant="primary"
+                size="lg"
+                className="w-full text-sm sm:text-base font-bold py-3.5 shadow-sm"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                disabled={isCheckingOut || isUpdating || isUpdatingFulfillment || isEmpty}
+                onClick={handleCheckout}
+              >
+                {isCheckingOut ? 'Placing Order...' : 'Place Order with Volume Pricing'}
+              </Button>
             </Card>
 
             {/* Quality & Direct Sourcing Assurance */}

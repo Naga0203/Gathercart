@@ -36,3 +36,4 @@ export interface AuthResponse {
   clusterName?: string;
   token: string;
 }
+

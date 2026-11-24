@@ -49,10 +49,10 @@ export const PickupTokenPage: React.FC = () => {
             READY FOR HUB PICKUP • Slot Active
           </Badge>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Your Batch is Ready for Collection at Indiranagar Hub!
+            Your Batch is Ready for Collection at Madhapur Hub, Hyderabad!
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-            Consolidated crate has arrived and unboxing inspection is verified. Present this digital pass and QR code to volunteer lead <strong>Suresh M.</strong> at Gate 2.
+            Consolidated crate has arrived and unboxing inspection is verified. Present this digital pass and QR code to volunteer lead <strong>Ananya S.</strong> at Gate 1.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export const PickupTokenPage: React.FC = () => {
                 <div className="text-[10px] uppercase font-bold tracking-wider opacity-80">
                   Neighbourhood Bulk Pass
                 </div>
-                <div className="text-sm font-bold mt-0.5">Indiranagar Cluster #04</div>
+                <div className="text-sm font-bold mt-0.5">Madhapur Cluster #01</div>
               </div>
               <span className="text-xs bg-emerald-700 px-2.5 py-1 rounded-full font-bold">
                 Single Allocation
@@ -179,7 +179,7 @@ export const PickupTokenPage: React.FC = () => {
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0">
                 <img
-                  src="https://images.unsplash.com/photo-1631451095765-2c91616fc9e6?auto=format&fit=crop&w=400&q=80"
+                  src="https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80"
                   alt="Ghee"
                   className="w-full h-full object-cover"
                 />
@@ -232,13 +232,13 @@ export const PickupTokenPage: React.FC = () => {
 
             <div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                Indiranagar Club – Gate 2
+                Madhapur Community Hub – Gate 1
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
-                100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560038
+                Near Cyber Towers, Hitec City Main Road, Madhapur, Hyderabad, Telangana – 500081
               </p>
               <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-1">
-                Opposite BDA Complex, near badminton court entry
+                Opposite Cyber Gateway, near badminton court entry
               </p>
             </div>
 
@@ -247,7 +247,7 @@ export const PickupTokenPage: React.FC = () => {
               size="sm"
               leftIcon={<ExternalLink className="w-3.5 h-3.5" />}
               className="w-full mt-2"
-              onClick={() => window.open('https://maps.google.com/?q=Indiranagar+Club+Bengaluru', '_blank')}
+              onClick={() => window.open('https://maps.google.com/?q=Cyber+Towers+Madhapur+Hyderabad', '_blank')}
             >
               Get Directions on Google Maps
             </Button>

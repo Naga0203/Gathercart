@@ -45,7 +45,6 @@ public class CartServiceImpl implements CartService {
     private static final String DEFAULT_DELIVERY_NOTE = "Free pickup at Madhapur Community Hub, Hyderabad (Thu 4:00 PM – 7:00 PM)";
 
     @Override
-    @Transactional(readOnly = true)
     public CartResponse getCart(Long userId) {
         Cart cart = getOrCreateCart(userId);
         return mapToCartResponse(cart);

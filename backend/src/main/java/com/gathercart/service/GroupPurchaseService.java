@@ -44,6 +44,7 @@ public class GroupPurchaseService {
     private final GroupPurchaseRepository groupPurchaseRepository;
     private final GroupParticipantRepository groupParticipantRepository;
     private final ProductRepository productRepository;
+    private final PricingCalculationService pricingCalculationService;
     private final Random random = new Random();
 
     @Transactional
@@ -63,7 +64,7 @@ public class GroupPurchaseService {
                 .clusterName(request.getClusterName() != null ? request.getClusterName() : "Community Hub")
                 .targetQuantity(request.getTargetQuantity())
                 .currentQuantity(0)
-                .householdLimit(request.getHouseholdLimit() != null ? request.getHouseholdLimit() : 3)
+                .householdLimit(request.getHouseholdLimit() != null ? request.getHouseholdLimit() : 25)
                 .status(GroupPurchaseStatus.OPEN)
                 .deadline(request.getDeadline())
                 .paymentWindowMins(10)
@@ -155,7 +156,7 @@ public class GroupPurchaseService {
                     .clusterName("Madhapur, Hyderabad")
                     .targetQuantity(25)
                     .currentQuantity(0)
-                    .householdLimit(3)
+                    .householdLimit(25)
                     .status(GroupPurchaseStatus.OPEN)
                     .deadline(LocalDateTime.now().plusDays(3))
                     .paymentWindowMins(120)
@@ -223,7 +224,9 @@ public class GroupPurchaseService {
 
         // Authoritative calculations
         Product product = groupPurchase.getProduct();
-        BigDecimal unitPrice = product.getGroupPrice();
+        BigDecimal unitPrice = (request.getQuantity() >= 5)
+                ? pricingCalculationService.calculateEffectiveUnitPrice(product.getMrp(), product.getVendorCostPrice(), request.getQuantity())
+                : product.getGroupPrice();
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
         BigDecimal mrpTotal = product.getMrp().multiply(BigDecimal.valueOf(request.getQuantity()));
         BigDecimal savings = mrpTotal.subtract(totalAmount);
@@ -348,8 +351,11 @@ public class GroupPurchaseService {
             participant.setQuantity(newQuantity);
 
             Product product = groupPurchase.getProduct();
-            participant.setUnitPrice(product.getGroupPrice());
-            participant.setTotalAmount(product.getGroupPrice().multiply(BigDecimal.valueOf(newQuantity)));
+            BigDecimal unitPrice = (pricingCalculationService != null && newQuantity >= 5)
+                    ? pricingCalculationService.calculateEffectiveUnitPrice(product.getMrp(), product.getVendorCostPrice(), newQuantity)
+                    : product.getGroupPrice();
+            participant.setUnitPrice(unitPrice);
+            participant.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
             participant.setMrpTotal(product.getMrp().multiply(BigDecimal.valueOf(newQuantity)));
             participant.setSavings(participant.getMrpTotal().subtract(participant.getTotalAmount()));
 

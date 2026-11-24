@@ -11,11 +11,13 @@ export const Header: React.FC = () => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clusterDropdownOpen, setClusterDropdownOpen] = useState(false);
-  const [selectedCluster, setSelectedCluster] = useState('Indiranagar, Bengaluru – 560038');
+  const [selectedCluster, setSelectedCluster] = useState('Madhapur, Hyderabad – 500081');
   const [cartTotalItems, setCartTotalItems] = useState<number>(0);
   const clusterDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     cartService.getCart()
       .then((cart) => setCartTotalItems(cart.totalItems))
       .catch(() => {});
@@ -24,13 +26,17 @@ export const Header: React.FC = () => {
       setCartTotalItems(cart.totalItems);
     });
     return cleanup;
-  }, []);
+  }, [isAuthenticated]);
+
+  const displayCartItems = isAuthenticated ? cartTotalItems : 0;
 
   const availableClusters = [
-    { name: 'Indiranagar, Bengaluru – 560038', activePools: 6, families: 248 },
-    { name: 'Koramangala, Bengaluru – 560034', activePools: 4, families: 184 },
-    { name: 'HSR Layout, Bengaluru – 560102', activePools: 5, families: 210 },
-    { name: 'Whitefield, Bengaluru – 560066', activePools: 3, families: 145 },
+    { name: 'Madhapur, Hyderabad – 500081', activePools: 6, families: 284 },
+    { name: 'Gachibowli, Hyderabad – 500032', activePools: 5, families: 215 },
+    { name: 'Jubilee Hills, Hyderabad – 500033', activePools: 4, families: 190 },
+    { name: 'Kondapur, Hyderabad – 500084', activePools: 5, families: 175 },
+    { name: 'Banjara Hills, Hyderabad – 500034', activePools: 3, families: 140 },
+    { name: 'Kukatpally, Hyderabad – 500072', activePools: 4, families: 160 },
   ];
 
   useEffect(() => {
@@ -165,9 +171,9 @@ export const Header: React.FC = () => {
             >
               <ShoppingCart className="w-3.5 h-3.5" />
               <span>Cart</span>
-              {cartTotalItems > 0 && (
+              {displayCartItems > 0 && (
                 <span className="min-w-4 h-4 px-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-center">
-                  {cartTotalItems}
+                  {displayCartItems}
                 </span>
               )}
             </NavLink>
@@ -294,9 +300,9 @@ export const Header: React.FC = () => {
                 <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Cart</span>
               </div>
-              {cartTotalItems > 0 && (
+              {displayCartItems > 0 && (
                 <span className="min-w-5 h-5 px-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
-                  {cartTotalItems}
+                  {displayCartItems}
                 </span>
               )}
             </NavLink>
