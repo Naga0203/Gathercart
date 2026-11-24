@@ -19,6 +19,27 @@
 
 ---
 
+## UI Gallery & Interactive Walkthrough
+
+Explore the core user journey from collective batch discovery to digital pickup tokens:
+
+| 1. Active Offers (`HomePage`) | 2. User Registration (`RegisterPage`) | 3. Offer Details & Quota (`OfferDetailPage`) |
+|:---:|:---:|:---:|
+| <img src="Screens/screen1.png" width="260" alt="Home - Group Offers Grid" /> | <img src="Screens/screen2.png" width="260" alt="Neighborhood Member Registration" /> | <img src="Screens/screen3.png" width="260" alt="Offer Detail & Batch Timeline" /> |
+| Discover live wholesale batches & cluster metrics | Register with local apartment cluster and phone | Inspect co-op source, batch progress, and deadlines |
+
+| 4. Tiered Pricing & Ledger (`JoinBatchModal`) | 5. Community Sourcing (`HowItWorksPage`) | 6. Digital QR Pickup Pass (`PickupTokenPage`) |
+|:---:|:---:|:---:|
+| <img src="Screens/screen4.png" width="340" alt="Join Batch Modal & Dynamic Pricing Ledger" /> | <img src="Screens/screen5.png" width="260" alt="How Collective Buying Works" /> | <img src="Screens/screen7.png" width="260" alt="Digital Pickup Token & Verification" /> |
+| Dynamic volume discounts (4% to 20%) & live breakdown | Direct mill-to-hub workflow & savings explanation | Contactless verification pass at the Madhapur Hub |
+
+| 7. My Orders & Lifecycle Tracking (`MyOrdersPage`) |
+|:---:|
+| <img src="Screens/screen6.png" width="300" alt="Orders and Pledges Dashboard" /> |
+| Track order statuses from Placed to Confirmed & Ready for Pickup |
+
+---
+
 ## Technology Stack
 
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, React Router, Lucide React, Axios
