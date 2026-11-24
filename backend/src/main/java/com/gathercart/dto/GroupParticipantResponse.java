@@ -30,5 +30,8 @@ public class GroupParticipantResponse {
     private LocalDateTime pledgedAt;
     private String timeAgo;
     private Boolean isCurrentUser;
+    private String productName;
+    private String productImageUrl;
+    private String unitLabel;
 }
 

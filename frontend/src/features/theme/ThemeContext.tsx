@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { ThemeMode, ThemeContextType } from '../../types/theme';
+import React, { useEffect, useState } from 'react';
+import type { ThemeMode } from '../../types/theme';
+import { ThemeContext } from './themeContextDef';
 
 const THEME_STORAGE_KEY = 'gathercart_theme_mode';
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
@@ -62,12 +61,3 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </ThemeContext.Provider>
   );
 };
-
-export const useTheme = (): ThemeContextType => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};
-

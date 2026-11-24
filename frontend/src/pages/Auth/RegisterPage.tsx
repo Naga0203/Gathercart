@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -6,12 +7,79 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
-import { Input, Button, Card, Badge } from '../../components/common';
+import { Input, Button, Card, Badge, Alert } from '../../components/common';
+import { useAuth } from '../../features/auth/useAuth';
 
 export const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { register, login, isAuthenticated } = useAuth();
+
   const [activeTab, setActiveTab] = useState<'register' | 'login'>('register');
-  const [handoverPreference, setHandoverPreference] = useState<'club' | 'guard'>('club');
-  const [agreed, setAgreed] = useState(false);
+  const [handoverPreference, setHandoverPreference] = useState<'COMMUNITY_PICKUP' | 'GUARD_DESK'>('COMMUNITY_PICKUP');
+  const [agreed, setAgreed] = useState(true);
+
+  const [fullName, setFullName] = useState('Ananya Sharma');
+  const [phone, setPhone] = useState('+919876543210');
+  const [email, setEmail] = useState('ananya.sharma@example.com');
+  const [password, setPassword] = useState('secretPassword123');
+  const [addressLine1, setAddressLine1] = useState('Flat 402, Lotus Residency');
+
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (activeTab === 'register') {
+        if (!agreed) {
+          setError('Please agree to the terms to create your account.');
+          setIsSubmitting(false);
+          return;
+        }
+        await register({
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          clusterId: 1,
+          addressLine1: addressLine1.trim(),
+          addressLine2: 'Hitec City Road, Madhapur, Hyderabad – 500081',
+          handoverPreference,
+          preferredPickupNodeId: 1,
+          agreedToTerms: true,
+        });
+      } else {
+        await login({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+      }
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        setError(axiosErr.response?.data?.message || (activeTab === 'register' ? 'Registration failed.' : 'Invalid email or password.'));
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -50,7 +118,7 @@ export const RegisterPage: React.FC = () => {
         <div className="lg:col-span-5 space-y-6">
           <div className="space-y-3">
             <Badge variant="outline-green" size="md">
-              Indiranagar Cooperative
+              Madhapur Cooperative • Hyderabad
             </Badge>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -58,7 +126,7 @@ export const RegisterPage: React.FC = () => {
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Bypass retail middlemen. Join your local apartment and street clusters across Indiranagar to unlock genuine mill-gate pricing.
+              Bypass retail middlemen. Join your local apartment and street clusters across Madhapur, Hyderabad to unlock genuine mill-gate pricing.
             </p>
           </div>
 
@@ -96,7 +164,7 @@ export const RegisterPage: React.FC = () => {
               <div>
                 <h4 className="text-xs font-bold text-slate-900 dark:text-white">Consolidated neighborhood delivery</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Single truck delivery directly to Indiranagar Club or dropped at your apartment lobby.
+                  Single truck delivery directly to Madhapur Community Hub or dropped at your apartment lobby.
                 </p>
               </div>
             </div>
@@ -136,14 +204,17 @@ export const RegisterPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right Column: Registration Form */}
+        {/* Right Column: Registration / Login Form */}
         <div className="lg:col-span-7">
           <Card padding="lg" className="space-y-6">
             {/* Tab switch */}
             <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
               <button
                 type="button"
-                onClick={() => setActiveTab('register')}
+                onClick={() => {
+                  setActiveTab('register');
+                  setError(null);
+                }}
                 className={`py-2 rounded-lg text-xs font-bold transition ${
                   activeTab === 'register'
                     ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
@@ -154,7 +225,10 @@ export const RegisterPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('login')}
+                onClick={() => {
+                  setActiveTab('login');
+                  setError(null);
+                }}
                 className={`py-2 rounded-lg text-xs font-bold transition ${
                   activeTab === 'login'
                     ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
@@ -167,7 +241,7 @@ export const RegisterPage: React.FC = () => {
 
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {activeTab === 'register' ? 'Join the Indiranagar Cluster' : 'Welcome back to NeighbourBuy'}
+                {activeTab === 'register' ? 'Join the Madhapur Cluster, Hyderabad' : 'Welcome back to NeighbourBuy'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {activeTab === 'register'
@@ -176,32 +250,43 @@ export const RegisterPage: React.FC = () => {
               </p>
             </div>
 
+            {error && (
+              <Alert variant="error">
+                {error}
+              </Alert>
+            )}
+
             {/* Form Fields */}
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               {activeTab === 'register' && (
                 <Input
                   label="Full Name"
                   required
                   placeholder="e.g. Ananya Sharma"
-                  defaultValue="Ananya Sharma"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                 />
               )}
 
-              <Input
-                label="WhatsApp / Mobile Number"
-                required
-                placeholder="98765 43210"
-                defaultValue="98765 43210"
-                leftAddon={<span className="text-xs font-bold text-slate-600 dark:text-slate-300">🇮🇳 +91</span>}
-                helperText="Used exclusively for payment confirmation link when the cluster hits 20 pledges."
-              />
+              {activeTab === 'register' && (
+                <Input
+                  label="WhatsApp / Mobile Number"
+                  required
+                  placeholder="+919876543210"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  leftAddon={<span className="text-xs font-bold text-slate-600 dark:text-slate-300">🇮🇳</span>}
+                  helperText="Used exclusively for payment confirmation link when the cluster hits 20 pledges."
+                />
+              )}
 
               <Input
                 label="Email Address"
                 required
                 type="email"
                 placeholder="ananya.sharma@example.com"
-                defaultValue="ananya.sharma@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
 
               <Input
@@ -209,7 +294,8 @@ export const RegisterPage: React.FC = () => {
                 required
                 isPassword
                 placeholder="Minimum 8 characters"
-                defaultValue="secretPassword123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
 
               {activeTab === 'register' && (
@@ -222,13 +308,15 @@ export const RegisterPage: React.FC = () => {
                       type="text"
                       className="block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm"
                       placeholder="Flat No., Floor & Apartment / Villa Name"
-                      defaultValue="Flat 402, Lotus Residency"
+                      value={addressLine1}
+                      onChange={(e) => setAddressLine1(e.target.value)}
+                      required
                     />
                     <input
                       type="text"
                       readOnly
                       className="block w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-4 py-2 text-xs text-slate-600 dark:text-slate-400"
-                      value="5th Cross, Indiranagar, Bengaluru – 560038"
+                      value="Hitec City Road, Madhapur, Hyderabad – 500081"
                     />
                   </div>
 
@@ -239,9 +327,9 @@ export const RegisterPage: React.FC = () => {
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div
-                        onClick={() => setHandoverPreference('club')}
+                        onClick={() => setHandoverPreference('COMMUNITY_PICKUP')}
                         className={`p-3.5 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                          handoverPreference === 'club'
+                          handoverPreference === 'COMMUNITY_PICKUP'
                             ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600'
                             : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                         }`}
@@ -249,13 +337,13 @@ export const RegisterPage: React.FC = () => {
                         <input
                           type="radio"
                           name="handover"
-                          checked={handoverPreference === 'club'}
-                          onChange={() => setHandoverPreference('club')}
+                          checked={handoverPreference === 'COMMUNITY_PICKUP'}
+                          onChange={() => setHandoverPreference('COMMUNITY_PICKUP')}
                           className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
                         />
                         <div>
                           <div className="text-xs font-bold text-slate-900 dark:text-white">
-                            Indiranagar Club Gate 2
+                            Madhapur Community Hub – Gate 1
                           </div>
                           <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
                             Free Community Pickup
@@ -267,9 +355,9 @@ export const RegisterPage: React.FC = () => {
                       </div>
 
                       <div
-                        onClick={() => setHandoverPreference('guard')}
+                        onClick={() => setHandoverPreference('GUARD_DESK')}
                         className={`p-3.5 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                          handoverPreference === 'guard'
+                          handoverPreference === 'GUARD_DESK'
                             ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-600'
                             : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50'
                         }`}
@@ -277,8 +365,8 @@ export const RegisterPage: React.FC = () => {
                         <input
                           type="radio"
                           name="handover"
-                          checked={handoverPreference === 'guard'}
-                          onChange={() => setHandoverPreference('guard')}
+                          checked={handoverPreference === 'GUARD_DESK'}
+                          onChange={() => setHandoverPreference('GUARD_DESK')}
                           className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
                         />
                         <div>
@@ -305,8 +393,8 @@ export const RegisterPage: React.FC = () => {
                       onChange={(e) => setAgreed(e.target.checked)}
                       className="mt-1 rounded-sm text-emerald-600 focus:ring-emerald-500"
                     />
-                    <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-normal">
-                      I agree to participate in the Indiranagar buying cluster. I understand that payment is collected via UPI only after the mill order is confirmed.
+                    <label htmlFor="terms" className="text-xs text-slate-600 dark:text-slate-400 leading-normal cursor-pointer">
+                      I agree to participate in the Madhapur, Hyderabad buying cluster. I understand that payment is collected via UPI only after the mill order is confirmed.
                     </label>
                   </div>
                 </>
@@ -317,8 +405,12 @@ export const RegisterPage: React.FC = () => {
                 size="lg"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 className="w-full mt-4"
+                disabled={isSubmitting}
+                type="submit"
               >
-                {activeTab === 'register' ? 'Create Account & Link 2-Bag Pledge' : 'Log In to Cluster'}
+                {isSubmitting
+                  ? (activeTab === 'register' ? 'Creating Account…' : 'Logging In…')
+                  : (activeTab === 'register' ? 'Create Account & Link 2-Bag Pledge' : 'Log In to Cluster')}
               </Button>
             </form>
 
@@ -352,14 +444,14 @@ export const RegisterPage: React.FC = () => {
           <Card padding="md" className="space-y-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">When do I actually pay?</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Never upfront. When our Indiranagar quota hits 100%, an official UPI payment link is dispatched via WhatsApp. You pay only after the mill dispatches the batch.
+              Never upfront. When our Madhapur quota hits 100%, an official UPI payment link is dispatched via WhatsApp. You pay only after the mill dispatches the batch.
             </p>
           </Card>
 
           <Card padding="md" className="space-y-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">How do I collect my 50 kg rice?</h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              You can pick it up directly at the Indiranagar Club distribution point using your unique QR token, or opt for a building guard drop-off handled by our logistics partner.
+              You can pick it up directly at the Madhapur Community Hub distribution point using your unique QR token, or opt for a building guard drop-off handled by our logistics partner.
             </p>
           </Card>
 

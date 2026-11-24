@@ -57,6 +57,9 @@ public class Product extends BaseEntity {
     @Column(name = "group_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal groupPrice;
 
+    @Column(name = "vendor_cost_price", precision = 10, scale = 2)
+    private BigDecimal vendorCostPrice;
+
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 

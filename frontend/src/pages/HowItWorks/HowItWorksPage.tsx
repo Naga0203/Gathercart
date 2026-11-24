@@ -32,7 +32,7 @@ export const HowItWorksPage: React.FC = () => {
     {
       num: '04',
       title: 'Community Hub Pickup',
-      description: 'Collect your order from your neighborhood volunteer pickup point (e.g. Indiranagar Club) using your digital QR pass or manual PIN.',
+      description: 'Collect your order from your neighborhood volunteer pickup point (e.g. Madhapur Community Hub, Hyderabad) using your digital QR pass or manual PIN.',
       icon: <Truck className="w-6 h-6 text-emerald-600" />,
     },
   ];

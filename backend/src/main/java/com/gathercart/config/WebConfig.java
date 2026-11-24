@@ -10,7 +10,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        // Automatically prefix all @RestController routes with /api/v1, except RootController
-        configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) && !c.getSimpleName().startsWith("Root"));
+        // Automatically prefix all @RestController routes with /api/v1, except RootController and HealthController
+        configurer.addPathPrefix("/api/v1", c -> c.isAnnotationPresent(RestController.class) 
+                && !c.getSimpleName().startsWith("Root")
+                && !c.getSimpleName().startsWith("Health"));
     }
 }

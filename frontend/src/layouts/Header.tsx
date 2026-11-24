@@ -1,19 +1,42 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { MapPin, ChevronDown, ShoppingBag, Menu, X, User, Check } from 'lucide-react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { MapPin, ChevronDown, ShoppingBag, ShoppingCart, Menu, X, User, Check, LogOut } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { cartService } from '../services/cartService';
+import { useAuth } from '../features/auth/useAuth';
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clusterDropdownOpen, setClusterDropdownOpen] = useState(false);
-  const [selectedCluster, setSelectedCluster] = useState('Indiranagar, Bengaluru – 560038');
+  const [selectedCluster, setSelectedCluster] = useState('Madhapur, Hyderabad – 500081');
+  const [cartTotalItems, setCartTotalItems] = useState<number>(0);
   const clusterDropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    cartService.getCart()
+      .then((cart) => setCartTotalItems(cart.totalItems))
+      .catch(() => {});
+
+    const cleanup = cartService.onCartUpdated((cart) => {
+      setCartTotalItems(cart.totalItems);
+    });
+    return cleanup;
+  }, [isAuthenticated]);
+
+  const displayCartItems = isAuthenticated ? cartTotalItems : 0;
+
   const availableClusters = [
-    { name: 'Indiranagar, Bengaluru – 560038', activePools: 6, families: 248 },
-    { name: 'Koramangala, Bengaluru – 560034', activePools: 4, families: 184 },
-    { name: 'HSR Layout, Bengaluru – 560102', activePools: 5, families: 210 },
-    { name: 'Whitefield, Bengaluru – 560066', activePools: 3, families: 145 },
+    { name: 'Madhapur, Hyderabad – 500081', activePools: 6, families: 284 },
+    { name: 'Gachibowli, Hyderabad – 500032', activePools: 5, families: 215 },
+    { name: 'Jubilee Hills, Hyderabad – 500033', activePools: 4, families: 190 },
+    { name: 'Kondapur, Hyderabad – 500084', activePools: 5, families: 175 },
+    { name: 'Banjara Hills, Hyderabad – 500034', activePools: 3, families: 140 },
+    { name: 'Kukatpally, Hyderabad – 500072', activePools: 4, families: 160 },
   ];
 
   useEffect(() => {
@@ -28,6 +51,13 @@ export const Header: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
+  const displayName = user?.fullName || 'Account';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -130,6 +160,25 @@ export const Header: React.FC = () => {
             </NavLink>
 
             <NavLink
+              to="/cart"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-emerald-700 text-white shadow-xs dark:bg-emerald-600'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`
+              }
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Cart</span>
+              {displayCartItems > 0 && (
+                <span className="min-w-4 h-4 px-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-center">
+                  {displayCartItems}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
               to="/orders"
               className={({ isActive }) =>
                 `flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
@@ -146,21 +195,45 @@ export const Header: React.FC = () => {
             </NavLink>
           </nav>
 
-          {/* Right Controls: Theme Toggle & User Profile */}
+          {/* Right Controls: Theme Toggle & User Auth */}
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
 
-            <Link
-              to="/register"
-              className="hidden sm:flex items-center gap-2 p-1.5 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-            >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
-                <User className="w-4 h-4" />
+            {isAuthenticated ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
+                    {displayName}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Sign out"
+                  className="p-2 rounded-xl text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Ananya S.
-              </span>
-            </Link>
+            ) : (
+              <div className="hidden sm:flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition"
+                >
+                  Join Cluster
+                </Link>
+              </div>
+            )}
 
             {/* Mobile menu button */}
             <button
@@ -213,6 +286,28 @@ export const Header: React.FC = () => {
             </NavLink>
 
             <NavLink
+              to="/cart"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold ${
+                  isActive
+                    ? 'bg-emerald-700 text-white dark:bg-emerald-600'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`
+              }
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Cart</span>
+              </div>
+              {displayCartItems > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
+                  {displayCartItems}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
               to="/orders"
               onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
@@ -229,14 +324,42 @@ export const Header: React.FC = () => {
               </span>
             </NavLink>
 
-            <NavLink
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <User className="w-4 h-4 text-emerald-600" />
-              <span>Account / Profile (Ananya S.)</span>
-            </NavLink>
+            {isAuthenticated ? (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <User className="w-4 h-4 text-emerald-600" />
+                  <span>{displayName}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 px-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center py-2 text-sm font-semibold text-white bg-emerald-700 rounded-xl shadow-xs"
+                >
+                  Join
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </div>

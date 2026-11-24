@@ -44,6 +44,7 @@ public class GroupPurchaseService {
     private final GroupPurchaseRepository groupPurchaseRepository;
     private final GroupParticipantRepository groupParticipantRepository;
     private final ProductRepository productRepository;
+    private final PricingCalculationService pricingCalculationService;
     private final Random random = new Random();
 
     @Transactional
@@ -51,9 +52,11 @@ public class GroupPurchaseService {
         log.info("Creating new group purchase for productId: {}", request.getProductId());
 
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + request.getProductId()));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Product not found with ID: " + request.getProductId()));
 
-        String batchCode = "GP-" + String.format("%04d", random.nextInt(10000)) + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        String batchCode = "GP-" + String.format("%04d", random.nextInt(10000)) + "-"
+                + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
 
         GroupPurchase groupPurchase = GroupPurchase.builder()
                 .batchCode(batchCode)
@@ -61,7 +64,7 @@ public class GroupPurchaseService {
                 .clusterName(request.getClusterName() != null ? request.getClusterName() : "Community Hub")
                 .targetQuantity(request.getTargetQuantity())
                 .currentQuantity(0)
-                .householdLimit(request.getHouseholdLimit() != null ? request.getHouseholdLimit() : 3)
+                .householdLimit(request.getHouseholdLimit() != null ? request.getHouseholdLimit() : 25)
                 .status(GroupPurchaseStatus.OPEN)
                 .deadline(request.getDeadline())
                 .paymentWindowMins(10)
@@ -81,8 +84,7 @@ public class GroupPurchaseService {
             GroupPurchaseStatus status,
             String filter,
             Long categoryId,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         if (pageable == null) {
             pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
         }
@@ -115,7 +117,8 @@ public class GroupPurchaseService {
         if (filter != null && !filter.isBlank() && effectiveStatus == null) {
             String lowerFilter = filter.trim().toLowerCase();
             list = list.stream()
-                    .filter(gp -> (gp.getProduct() != null && gp.getProduct().getName() != null && gp.getProduct().getName().toLowerCase().contains(lowerFilter)) ||
+                    .filter(gp -> (gp.getProduct() != null && gp.getProduct().getName() != null
+                            && gp.getProduct().getName().toLowerCase().contains(lowerFilter)) ||
                             (gp.getClusterName() != null && gp.getClusterName().toLowerCase().contains(lowerFilter)) ||
                             (gp.getBatchCode() != null && gp.getBatchCode().toLowerCase().contains(lowerFilter)))
                     .collect(Collectors.toList());
@@ -135,16 +138,39 @@ public class GroupPurchaseService {
         return mapToGroupPurchaseResponse(groupPurchase);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public GroupPurchaseResponse getActiveGroupByProductId(Long productId) {
-        productRepository.findById(productId)
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
 
         List<GroupPurchase> activeList = groupPurchaseRepository.findActiveByProductId(productId);
-        if (activeList == null || activeList.isEmpty()) {
-            throw new ResourceNotFoundException("No active group purchase found for product ID: " + productId);
+        if (activeList != null && !activeList.isEmpty()) {
+            return mapToGroupPurchaseResponse(activeList.get(0));
         }
-        return mapToGroupPurchaseResponse(activeList.get(0));
+
+        // Auto-provision an OPEN batch for active products so group reservations are never blocked
+        if (Boolean.TRUE.equals(product.getIsActive())) {
+            GroupPurchase autoBatch = GroupPurchase.builder()
+                    .batchCode("HYD-" + String.format("%03d", product.getId() * 100 + 1))
+                    .product(product)
+                    .clusterName("Madhapur, Hyderabad")
+                    .targetQuantity(25)
+                    .currentQuantity(0)
+                    .householdLimit(25)
+                    .status(GroupPurchaseStatus.OPEN)
+                    .deadline(LocalDateTime.now().plusDays(3))
+                    .paymentWindowMins(120)
+                    .leadOrganiser("Ananya S. (Cyber Towers Hub)")
+                    .hubDropLocation("Madhapur Community Hub – Gate 1, Near Cyber Towers, Hyderabad")
+                    .isFreeDelivery(true)
+                    .participants(new ArrayList<>())
+                    .build();
+            GroupPurchase saved = groupPurchaseRepository.save(autoBatch);
+            log.info("Auto-provisioned open batch {} for product ID: {}", saved.getBatchCode(), productId);
+            return mapToGroupPurchaseResponse(saved);
+        }
+
+        throw new ResourceNotFoundException("No active group purchase found for product ID: " + productId);
     }
 
     @Transactional
@@ -153,40 +179,54 @@ public class GroupPurchaseService {
 
         // Pessimistic lock
         GroupPurchase groupPurchase = groupPurchaseRepository.findByIdWithLock(groupPurchaseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
 
         if (groupPurchase.getStatus() != GroupPurchaseStatus.OPEN) {
-            throw new BusinessException("Group purchase is not open for pledges (status: " + groupPurchase.getStatus() + ")");
+            throw new BusinessException(
+                    "Group purchase is not open for pledges (status: " + groupPurchase.getStatus() + ")");
         }
         if (groupPurchase.getDeadline() != null && !LocalDateTime.now().isBefore(groupPurchase.getDeadline())) {
             throw new BusinessException("Group purchase deadline has passed");
         }
 
+        // Ownership enforcement: userId is required for joining
+        if (request.getUserId() == null) {
+            throw new BusinessException("User ID is required for joining a group purchase");
+        }
+
         // Duplicate active pledge validation
         boolean duplicatePhone = groupParticipantRepository.findByGroupPurchaseIdAndPhoneAndStatus(
                 groupPurchaseId, request.getPhone(), GroupParticipantStatus.ACTIVE).isPresent();
-        boolean duplicateUser = request.getUserId() != null && groupParticipantRepository.findByGroupPurchaseIdAndUserIdAndStatus(
-                groupPurchaseId, request.getUserId(), GroupParticipantStatus.ACTIVE).isPresent();
+        boolean duplicateUser = request.getUserId() != null
+                && groupParticipantRepository.findByGroupPurchaseIdAndUserIdAndStatus(
+                        groupPurchaseId, request.getUserId(), GroupParticipantStatus.ACTIVE).isPresent();
         if (duplicatePhone || duplicateUser) {
-            throw new BusinessException("You already have an active pledge in this group. Please update your existing pledge.");
+            throw new BusinessException(
+                    "You already have an active pledge in this group. Please update your existing pledge.");
         }
 
         // Household limit validation
-        Integer phoneQty = groupParticipantRepository.sumQuantityByGroupPurchaseIdAndPhone(groupPurchaseId, request.getPhone());
+        Integer phoneQty = groupParticipantRepository.sumQuantityByGroupPurchaseIdAndPhone(groupPurchaseId,
+                request.getPhone());
         int currentPhoneTotal = (phoneQty != null) ? phoneQty : 0;
         if (currentPhoneTotal + request.getQuantity() > groupPurchase.getHouseholdLimit()) {
-            throw new BusinessException("Requested quantity exceeds household limit of " + groupPurchase.getHouseholdLimit());
+            throw new BusinessException(
+                    "Requested quantity exceeds household limit of " + groupPurchase.getHouseholdLimit());
         }
 
         // Remaining capacity validation
         int remainingCapacity = groupPurchase.getTargetQuantity() - groupPurchase.getCurrentQuantity();
         if (request.getQuantity() > remainingCapacity) {
-            throw new BusinessException("Requested quantity (" + request.getQuantity() + ") exceeds remaining capacity of " + remainingCapacity);
+            throw new BusinessException("Requested quantity (" + request.getQuantity()
+                    + ") exceeds remaining capacity of " + remainingCapacity);
         }
 
         // Authoritative calculations
         Product product = groupPurchase.getProduct();
-        BigDecimal unitPrice = product.getGroupPrice();
+        BigDecimal unitPrice = (request.getQuantity() >= 5)
+                ? pricingCalculationService.calculateEffectiveUnitPrice(product.getMrp(), product.getVendorCostPrice(), request.getQuantity())
+                : product.getGroupPrice();
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
         BigDecimal mrpTotal = product.getMrp().multiply(BigDecimal.valueOf(request.getQuantity()));
         BigDecimal savings = mrpTotal.subtract(totalAmount);
@@ -194,7 +234,8 @@ public class GroupPurchaseService {
         // Commitment code format
         String productName = (product.getName() != null && !product.getName().isBlank()) ? product.getName() : "PROD";
         String firstWord = productName.trim().split("\\s+")[0].replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
-        if (firstWord.isEmpty()) firstWord = "PROD";
+        if (firstWord.isEmpty())
+            firstWord = "PROD";
         String commitmentCode = "NB-CMT-" + String.format("%04d", random.nextInt(10000)) + "-" + firstWord;
 
         GroupParticipant participant = GroupParticipant.builder()
@@ -217,7 +258,8 @@ public class GroupPurchaseService {
 
         // Status automation: target quantity reached
         if (groupPurchase.getCurrentQuantity().equals(groupPurchase.getTargetQuantity())) {
-            log.info("Group purchase {} reached target quantity {}. Transitioning to CONFIRMED.", groupPurchase.getId(), groupPurchase.getTargetQuantity());
+            log.info("Group purchase {} reached target quantity {}. Transitioning to CONFIRMED.", groupPurchase.getId(),
+                    groupPurchase.getTargetQuantity());
             groupPurchase.setStatus(GroupPurchaseStatus.CONFIRMED);
             int windowMins = groupPurchase.getPaymentWindowMins() != null ? groupPurchase.getPaymentWindowMins() : 10;
             LocalDateTime paymentDeadline = LocalDateTime.now().plusMinutes(windowMins);
@@ -241,21 +283,45 @@ public class GroupPurchaseService {
         return mapToParticipantResponse(participant);
     }
 
+    @Transactional(readOnly = true)
+    public List<GroupParticipantResponse> getUserParticipations(Long userId) {
+        if (userId == null) {
+            return Collections.emptyList();
+        }
+        List<GroupParticipant> list = groupParticipantRepository.findByUserIdOrderByPledgedAtDesc(userId);
+        return list.stream()
+                .map(this::mapToParticipantResponse)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public GroupParticipantResponse updateQuantity(Long participantId, int newQuantity) {
+        return updateQuantity(participantId, newQuantity, null);
+    }
+
+    @Transactional
+    public GroupParticipantResponse updateQuantity(Long participantId, int newQuantity, Long requestingUserId) {
         if (newQuantity <= 0) {
             throw new BusinessException("Quantity must be at least 1");
         }
 
-        GroupParticipant participant = groupParticipantRepository.findById(participantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group participant not found with ID: " + participantId));
+        GroupParticipant participant = groupParticipantRepository.findByIdWithLock(participantId)
+                .or(() -> groupParticipantRepository.findById(participantId))
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group participant not found with ID: " + participantId));
+
+        if (requestingUserId != null && participant.getUserId() != null && !participant.getUserId().equals(requestingUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have permission to modify this pledge");
+        }
 
         final Long groupPurchaseId = participant.getGroupPurchase().getId();
         GroupPurchase groupPurchase = groupPurchaseRepository.findByIdWithLock(groupPurchaseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
 
         if (groupPurchase.getStatus() != GroupPurchaseStatus.OPEN) {
-            throw new BusinessException("Group purchase is not open for updates (status: " + groupPurchase.getStatus() + ")");
+            throw new BusinessException(
+                    "Group purchase is not open for updates (status: " + groupPurchase.getStatus() + ")");
         }
         if (groupPurchase.getDeadline() != null && !LocalDateTime.now().isBefore(groupPurchase.getDeadline())) {
             throw new BusinessException("Group purchase deadline has passed");
@@ -267,14 +333,17 @@ public class GroupPurchaseService {
         int delta = newQuantity - participant.getQuantity();
         if (delta != 0) {
             if (delta > 0) {
-                Integer phoneQty = groupParticipantRepository.sumQuantityByGroupPurchaseIdAndPhone(groupPurchase.getId(), participant.getPhone());
+                Integer phoneQty = groupParticipantRepository
+                        .sumQuantityByGroupPurchaseIdAndPhone(groupPurchase.getId(), participant.getPhone());
                 int currentPhoneTotal = (phoneQty != null) ? phoneQty : 0;
                 if (currentPhoneTotal + delta > groupPurchase.getHouseholdLimit()) {
-                    throw new BusinessException("Updated quantity exceeds household limit of " + groupPurchase.getHouseholdLimit());
+                    throw new BusinessException(
+                            "Updated quantity exceeds household limit of " + groupPurchase.getHouseholdLimit());
                 }
                 int remainingCapacity = groupPurchase.getTargetQuantity() - groupPurchase.getCurrentQuantity();
                 if (delta > remainingCapacity) {
-                    throw new BusinessException("Requested quantity delta (" + delta + ") exceeds remaining capacity of " + remainingCapacity);
+                    throw new BusinessException("Requested quantity delta (" + delta
+                            + ") exceeds remaining capacity of " + remainingCapacity);
                 }
             }
 
@@ -282,19 +351,24 @@ public class GroupPurchaseService {
             participant.setQuantity(newQuantity);
 
             Product product = groupPurchase.getProduct();
-            participant.setUnitPrice(product.getGroupPrice());
-            participant.setTotalAmount(product.getGroupPrice().multiply(BigDecimal.valueOf(newQuantity)));
+            BigDecimal unitPrice = (pricingCalculationService != null && newQuantity >= 5)
+                    ? pricingCalculationService.calculateEffectiveUnitPrice(product.getMrp(), product.getVendorCostPrice(), newQuantity)
+                    : product.getGroupPrice();
+            participant.setUnitPrice(unitPrice);
+            participant.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(newQuantity)));
             participant.setMrpTotal(product.getMrp().multiply(BigDecimal.valueOf(newQuantity)));
             participant.setSavings(participant.getMrpTotal().subtract(participant.getTotalAmount()));
 
             if (groupPurchase.getCurrentQuantity().equals(groupPurchase.getTargetQuantity())) {
                 groupPurchase.setStatus(GroupPurchaseStatus.CONFIRMED);
-                int windowMins = groupPurchase.getPaymentWindowMins() != null ? groupPurchase.getPaymentWindowMins() : 10;
+                int windowMins = groupPurchase.getPaymentWindowMins() != null ? groupPurchase.getPaymentWindowMins()
+                        : 10;
                 LocalDateTime paymentDeadline = LocalDateTime.now().plusMinutes(windowMins);
                 groupPurchase.setPaymentDeadline(paymentDeadline);
 
                 List<GroupParticipant> activeParticipants = groupParticipantRepository
-                        .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchase.getId(), GroupParticipantStatus.ACTIVE);
+                        .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchase.getId(),
+                                GroupParticipantStatus.ACTIVE);
                 for (GroupParticipant p : activeParticipants) {
                     if (!p.getId().equals(participant.getId())) {
                         p.setStatus(GroupParticipantStatus.PAYMENT_PENDING);
@@ -316,17 +390,30 @@ public class GroupPurchaseService {
 
     @Transactional
     public void cancelParticipation(Long participantId) {
-        GroupParticipant participant = groupParticipantRepository.findById(participantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group participant not found with ID: " + participantId));
+        cancelParticipation(participantId, null);
+    }
+
+    @Transactional
+    public void cancelParticipation(Long participantId, Long requestingUserId) {
+        GroupParticipant participant = groupParticipantRepository.findByIdWithLock(participantId)
+                .or(() -> groupParticipantRepository.findById(participantId))
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group participant not found with ID: " + participantId));
+
+        if (requestingUserId != null && participant.getUserId() != null && !participant.getUserId().equals(requestingUserId)) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not have permission to cancel this pledge");
+        }
 
         final Long groupPurchaseId = participant.getGroupPurchase().getId();
         GroupPurchase groupPurchase = groupPurchaseRepository.findByIdWithLock(groupPurchaseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
 
         if (participant.getStatus() == GroupParticipantStatus.CANCELLED) {
             throw new BusinessException("Pledge is already cancelled");
         }
-        if (participant.getStatus() != GroupParticipantStatus.ACTIVE && participant.getStatus() != GroupParticipantStatus.PAYMENT_PENDING) {
+        if (participant.getStatus() != GroupParticipantStatus.ACTIVE
+                && participant.getStatus() != GroupParticipantStatus.PAYMENT_PENDING) {
             throw new BusinessException("Cannot cancel pledge with status: " + participant.getStatus());
         }
         if (groupPurchase.getDeadline() != null && !LocalDateTime.now().isBefore(groupPurchase.getDeadline())) {
@@ -347,7 +434,8 @@ public class GroupPurchaseService {
                 groupPurchase.setPaymentDeadline(null);
 
                 List<GroupParticipant> pendingParticipants = groupParticipantRepository
-                        .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchase.getId(), GroupParticipantStatus.PAYMENT_PENDING);
+                        .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchase.getId(),
+                                GroupParticipantStatus.PAYMENT_PENDING);
                 for (GroupParticipant p : pendingParticipants) {
                     if (!p.getId().equals(participant.getId())) {
                         p.setStatus(GroupParticipantStatus.ACTIVE);
@@ -366,21 +454,25 @@ public class GroupPurchaseService {
     @Transactional(readOnly = true)
     public List<GroupParticipantResponse> getParticipants(Long groupPurchaseId) {
         GroupPurchase groupPurchase = groupPurchaseRepository.findById(groupPurchaseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Group purchase not found with ID: " + groupPurchaseId));
 
         List<GroupParticipant> list;
         if (groupPurchase.getParticipants() != null && !groupPurchase.getParticipants().isEmpty()) {
             list = groupPurchase.getParticipants().stream()
-                    .sorted(Comparator.comparing(GroupParticipant::getPledgedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .sorted(Comparator.comparing(GroupParticipant::getPledgedAt,
+                            Comparator.nullsLast(Comparator.reverseOrder())))
                     .collect(Collectors.toList());
         } else {
             List<GroupParticipant> active = groupParticipantRepository
                     .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchaseId, GroupParticipantStatus.ACTIVE);
             List<GroupParticipant> pending = groupParticipantRepository
-                    .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchaseId, GroupParticipantStatus.PAYMENT_PENDING);
+                    .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(groupPurchaseId,
+                            GroupParticipantStatus.PAYMENT_PENDING);
             List<GroupParticipant> combined = new ArrayList<>(active);
             combined.addAll(pending);
-            combined.sort(Comparator.comparing(GroupParticipant::getPledgedAt, Comparator.nullsLast(Comparator.reverseOrder())));
+            combined.sort(Comparator.comparing(GroupParticipant::getPledgedAt,
+                    Comparator.nullsLast(Comparator.reverseOrder())));
             list = combined;
         }
 
@@ -390,7 +482,8 @@ public class GroupPurchaseService {
     }
 
     public GroupPurchaseResponse mapToGroupPurchaseResponse(GroupPurchase gp) {
-        if (gp == null) return null;
+        if (gp == null)
+            return null;
 
         int target = gp.getTargetQuantity() != null ? gp.getTargetQuantity() : 0;
         int current = gp.getCurrentQuantity() != null ? gp.getCurrentQuantity() : 0;
@@ -401,16 +494,19 @@ public class GroupPurchaseService {
         if (gp.getParticipants() != null && !gp.getParticipants().isEmpty()) {
             nonCancelled = gp.getParticipants().stream()
                     .filter(p -> p.getStatus() != GroupParticipantStatus.CANCELLED)
-                    .sorted(Comparator.comparing(GroupParticipant::getPledgedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .sorted(Comparator.comparing(GroupParticipant::getPledgedAt,
+                            Comparator.nullsLast(Comparator.reverseOrder())))
                     .collect(Collectors.toList());
         } else if (gp.getId() != null) {
             List<GroupParticipant> active = groupParticipantRepository
                     .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(gp.getId(), GroupParticipantStatus.ACTIVE);
             List<GroupParticipant> pending = groupParticipantRepository
-                    .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(gp.getId(), GroupParticipantStatus.PAYMENT_PENDING);
+                    .findByGroupPurchaseIdAndStatusOrderByPledgedAtDesc(gp.getId(),
+                            GroupParticipantStatus.PAYMENT_PENDING);
             List<GroupParticipant> combined = new ArrayList<>(active);
             combined.addAll(pending);
-            combined.sort(Comparator.comparing(GroupParticipant::getPledgedAt, Comparator.nullsLast(Comparator.reverseOrder())));
+            combined.sort(Comparator.comparing(GroupParticipant::getPledgedAt,
+                    Comparator.nullsLast(Comparator.reverseOrder())));
             nonCancelled = combined;
         } else {
             nonCancelled = Collections.emptyList();
@@ -446,13 +542,25 @@ public class GroupPurchaseService {
     }
 
     public GroupParticipantResponse mapToParticipantResponse(GroupParticipant participant) {
-        if (participant == null) return null;
+        if (participant == null)
+            return null;
+
+        String productName = null;
+        String productImageUrl = null;
+        String unitLabel = null;
+        if (participant.getGroupPurchase() != null && participant.getGroupPurchase().getProduct() != null) {
+            Product p = participant.getGroupPurchase().getProduct();
+            productName = p.getName();
+            productImageUrl = p.getImageUrl();
+            unitLabel = p.getUnitLabel();
+        }
 
         return GroupParticipantResponse.builder()
                 .id(participant.getId())
                 .commitmentCode(participant.getCommitmentCode())
                 .groupPurchaseId(participant.getGroupPurchase() != null ? participant.getGroupPurchase().getId() : null)
-                .batchCode(participant.getGroupPurchase() != null ? participant.getGroupPurchase().getBatchCode() : null)
+                .batchCode(
+                        participant.getGroupPurchase() != null ? participant.getGroupPurchase().getBatchCode() : null)
                 .displayName(participant.getDisplayName())
                 .initials(extractInitials(participant.getDisplayName()))
                 .location(participant.getLocation())
@@ -465,11 +573,15 @@ public class GroupPurchaseService {
                 .pledgedAt(participant.getPledgedAt())
                 .timeAgo(formatTimeAgo(participant.getPledgedAt()))
                 .isCurrentUser(false)
+                .productName(productName)
+                .productImageUrl(productImageUrl)
+                .unitLabel(unitLabel)
                 .build();
     }
 
     public String computeContextMessage(GroupPurchaseStatus status, int remainingQuantity) {
-        if (status == GroupPurchaseStatus.CONFIRMED || status == GroupPurchaseStatus.DISPATCHED || status == GroupPurchaseStatus.DELIVERED) {
+        if (status == GroupPurchaseStatus.CONFIRMED || status == GroupPurchaseStatus.DISPATCHED
+                || status == GroupPurchaseStatus.DELIVERED) {
             return "Locked & dispatched for delivery";
         } else if (status == GroupPurchaseStatus.EXPIRED || status == GroupPurchaseStatus.CANCELLED) {
             return "Target not met • No money was charged to anyone";

@@ -2,7 +2,9 @@ package com.gathercart.repository;
 
 import com.gathercart.entity.GroupParticipant;
 import com.gathercart.entity.GroupParticipantStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,4 +25,12 @@ public interface GroupParticipantRepository extends JpaRepository<GroupParticipa
     Integer sumQuantityByGroupPurchaseIdAndPhone(@Param("groupPurchaseId") Long groupPurchaseId, @Param("phone") String phone);
 
     Optional<GroupParticipant> findByCommitmentCode(String commitmentCode);
+
+    List<GroupParticipant> findByUserIdOrderByPledgedAtDesc(Long userId);
+
+    List<GroupParticipant> findByUserIdAndStatusNotOrderByPledgedAtDesc(Long userId, GroupParticipantStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT gp FROM GroupParticipant gp WHERE gp.id = :id")
+    Optional<GroupParticipant> findByIdWithLock(@Param("id") Long id);
 }

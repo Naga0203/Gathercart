@@ -9,10 +9,10 @@ export interface ClusterStatTickerProps {
 }
 
 export const ClusterStatTicker: React.FC<ClusterStatTickerProps> = ({
-  familiesCount = 248,
+  familiesCount = 284,
   savingsThisMonth = '₹1,42,800',
-  nextDelivery = 'Thursday 4 PM',
-  clusterName = 'Indiranagar',
+  nextDelivery = 'Thursday 4:00 PM – 7:00 PM',
+  clusterName = 'Madhapur, Hyderabad',
 }) => {
   return (
     <div className="bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-100 dark:border-emerald-900/60 py-2 px-4 text-xs font-medium text-emerald-900 dark:text-emerald-200">
