@@ -5,6 +5,20 @@
 
 ---
 
+## Key Features
+
+- **Cooperative & Wholesale Sourcing**: Connect direct-from-mill and farmer co-ops with residential apartment clusters.
+- **Group Purchase Batches**: Live pooling of item demand with target quotas, lock thresholds, and real-time progress bars.
+- **Dynamic Volume Discounting**: Tiered savings curve from 4% at 5 units up to 20% at 25 units, enforced with vendor cost floor protection.
+- **Flexible Fulfillment**:
+  - *Store / Hub Pickup*: Free pickup at community hubs (e.g. Madhapur Community Hub, Hyderabad).
+  - *Home Delivery*: Doorstep delivery with base fee plus dynamic per-kg weight surcharge.
+- **Cart & Order Lifecycle**: Persistent shopping cart, atomic checkout, unique order numbering, and order history tracking.
+- **Spring Security & JWT Auth**: Stateless Bearer token authentication, BCrypt password hashing, and role-based access control (Customer, Admin).
+- **Responsive 3-Mode Theme System**: Light, Warm/Dark, and High-Contrast system-adaptive theme toggle.
+
+---
+
 ## Technology Stack
 
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, React Router, Lucide React, Axios
@@ -115,6 +129,24 @@ npm run dev
 
 ---
 
+### 5. Running Tests & Verification
+
+#### Backend Tests
+```bash
+cd backend
+mvn test
+```
+Runs 83+ comprehensive unit and integration tests across controllers, security, cart calculations, volume discounting curve, and order processing.
+
+#### Frontend Build & Typecheck
+```bash
+cd frontend
+npm run build
+```
+Validates TypeScript compilation and builds the optimized production bundle with Vite.
+
+---
+
 ## Development Milestones
 
 | Phase | Description | Status |
@@ -122,10 +154,10 @@ npm run dev
 | **Phase 0** | Project Discovery, UI Analysis, Planning Documents | ✅ Complete |
 | **Phase 1** | Full-Stack Foundation (React + Vite + Spring Boot + Supabase PostgreSQL) | ✅ Complete |
 | **Phase 2** | UI Foundation, Shell & 3-Mode Theme System | ✅ Complete |
-| **Phase 3** | Product Discovery & Catalog Browsing | ⬜ Next |
-| **Phase 4** | Batches & Group Buying (Pledges, Locking, Limits) | ⬜ |
-| **Phase 5** | My Orders & Order Lifecycle Dashboard | ⬜ |
-| **Phase 6** | UPI Payments & Digital Pickup Tokens | ⬜ |
-| **Phase 7** | Spring Security & JWT Authentication | ⬜ |
-| **Phase 8** | Application Enhancements & Edge Cases | ⬜ |
-| **Phase 9** | E2E Testing, Security Audit & Stabilization | ⬜ |
+| **Phase 3** | Product Discovery & Catalog Browsing | ✅ Complete |
+| **Phase 4** | Batches & Group Buying (Pledges, Locking, Limits) | ✅ Complete |
+| **Phase 5** | My Orders & Order Lifecycle Dashboard | ✅ Complete |
+| **Phase 6** | Fulfillment, Volume Discounting & Delivery Pricing | ✅ Complete |
+| **Phase 7** | Spring Security & JWT Authentication | ✅ Complete |
+| **Phase 8** | Application Enhancements & Edge Cases | 🔄 In Progress |
+| **Phase 9** | E2E Testing, Security Audit & Stabilization | ⬜ Next |
