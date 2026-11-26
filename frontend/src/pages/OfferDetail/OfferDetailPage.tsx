@@ -29,6 +29,7 @@ import { productService } from '../../services/productService';
 import { cartService } from '../../services/cartService';
 import { batchService } from '../../services/batchService';
 import { useAuth } from '../../features/auth/useAuth';
+import { openWhatsAppShare } from '../../utils/whatsapp';
 import type { ProductDetail } from '../../types/product';
 import type { BatchResponse, BatchParticipant } from '../../types/batch';
 
@@ -705,13 +706,19 @@ export const OfferDetailPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="w-full"
-                leftIcon={<Share2 className="w-4 h-4" />}
+                leftIcon={<Share2 className="w-4 h-4 text-emerald-600" />}
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Product link copied to clipboard!');
+                  const remainingText =
+                    remainingQty > 0
+                      ? ` Only ${remainingQty} units left to lock the wholesale rate!`
+                      : '';
+                  const msg = `Join our Madhapur NeighbourBuy group pool for ${product.name} (${product.unitLabel}) at ₹${product.groupPrice} (save ₹${product.savingsAmount} vs retail MRP ₹${product.mrp}).${remainingText} ${window.location.href}`;
+                  openWhatsAppShare(msg);
                 }}
               >
-                Share with Neighbours to Unlock Quota
+                {remainingQty > 0
+                  ? `Share on WhatsApp to Lock ${remainingQty} Left`
+                  : 'Share with Neighbours on WhatsApp'}
               </Button>
             </div>
           </Card>

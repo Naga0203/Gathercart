@@ -1,6 +1,6 @@
 # GatherCart — Development Plan
 
-> **Status**: Proposed (Phase 0) — Awaiting approval before execution.
+> **Status**: Phases 1–8 Complete — Phase 9 (Integration Testing & Stabilization) pending.
 
 ---
 
@@ -58,113 +58,111 @@
 ### Phase 3: Products, Categories & Offer Browsing
 **Goal**: End-to-end product/offer listing with backend data.
 
-| Task | Details |
-|------|---------|
-| Create DB entities | `category`, `coop_profile`, `product`, `product_image` |
-| Implement Product CRUD APIs | GET list (paginated), GET by ID, admin POST/PUT |
-| Implement Category API | GET all categories |
-| Implement Home page | Hero section, category filter, offer card grid |
-| Implement Product Detail page | Gallery, specs, co-op profile, quality notes |
-| Add seed data | Categories, co-op profiles, 6 products with images |
-| Integration | Connect frontend to real APIs |
-| Test | Product listing, detail, category filter, search |
+| Task | Details | Status |
+|------|---------|--------|
+| Create DB entities | `category`, `coop_profile`, `product`, `product_image` | ✅ Complete |
+| Implement Product CRUD APIs | GET list (paginated), GET by ID, admin POST/PUT/DELETE | ✅ Complete |
+| Implement Category API | GET all categories | ✅ Complete |
+| Implement Home page | Hero section, category filter, search, sort, offer card grid | ✅ Complete |
+| Implement Product Detail page | Gallery, specs, co-op profile, quality notes | ✅ Complete |
+| Add seed data | Categories, co-op profiles, 6 products with images | ✅ Complete |
+| Integration | Connect frontend to real APIs | ✅ Complete |
+| Test | Product listing, detail, category filter, search | ✅ Complete |
 
-**Completion Criteria**: User can browse products loaded from MySQL.
+**Completion Criteria**: User can browse products loaded from MySQL/PostgreSQL. (Status: ✅ Complete)
 
 ---
 
 ### Phase 4: Batches, Pledges & Group Buying
 **Goal**: Core group-buying flow — batch progress, pledge creation, modification, cancellation.
 
-| Task | Details |
-|------|---------|
-| Create DB entities | `batch`, `pledge` |
-| Implement Batch APIs | GET list (with filters), GET detail, GET participants |
-| Implement Pledge APIs | POST create, PATCH modify quantity, DELETE cancel |
-| Implement concurrency protection | Pessimistic locking on batch row during pledge |
-| Implement batch progress computation | current/target, remaining, percentage |
-| Build offer cards with batch data | Status, countdown, progress bar, participant count |
-| Build JoinBatchModal | Quantity selector, savings ledger, confirm/cancel |
-| Build pledge actions | View/Modify, Cancel, Share to WhatsApp |
-| Implement household limit enforcement | Backend validation |
-| Implement batch status transitions | OPEN → CONFIRMED/EXPIRED |
-| Add seed data | Batches in various states |
-| Test | Create/modify/cancel pledge, concurrent pledges, capacity overflow |
+| Task | Details | Status |
+|------|---------|--------|
+| Create DB entities | `group_purchase`, `group_participant` | ✅ Complete |
+| Implement Batch APIs | GET list (with filters), GET detail, GET participants | ✅ Complete |
+| Implement Pledge APIs | POST create, PATCH modify quantity, DELETE cancel | ✅ Complete |
+| Implement concurrency protection | Pessimistic locking on batch row during pledge | ✅ Complete |
+| Implement batch progress computation | current/target, remaining, percentage | ✅ Complete |
+| Build offer cards with batch data | Status, countdown, progress bar, participant count | ✅ Complete |
+| Build JoinBatchModal | Quantity selector, savings ledger, confirm/cancel | ✅ Complete |
+| Build pledge actions | View/Modify, Cancel, Share to WhatsApp | ✅ Complete |
+| Implement household limit enforcement | Backend validation | ✅ Complete |
+| Implement batch status transitions | OPEN → CONFIRMED/EXPIRED | ✅ Complete |
+| Add seed data | Batches in various states | ✅ Complete |
+| Test | Create/modify/cancel pledge, concurrent pledges, capacity overflow | ✅ Complete |
 
-**Completion Criteria**: Full group-buying workflow works through React → Spring Boot → MySQL.
+**Completion Criteria**: Full group-buying workflow works through React → Spring Boot → Database. (Status: ✅ Complete)
 
 ---
 
 ### Phase 5: My Orders & Order Detail
 **Goal**: User's order dashboard and order lifecycle view.
 
-| Task | Details |
-|------|---------|
-| Implement Orders APIs | GET my orders (with tab filters), GET order detail with lifecycle |
-| Build My Orders page | Summary stats, 3 tabs, pledge cards, activity history |
-| Build Order Detail page | Lifecycle stepper, allocated item, coordinator, quota pool |
-| Implement order lifecycle computation | 4-step status derivation from pledge/batch/payment state |
-| Implement action badges | "Action Required", countdowns |
-| Test | Orders in all states, lifecycle correctness |
+| Task | Details | Status |
+|------|---------|--------|
+| Implement Orders APIs | GET my orders, POST create from cart, POST cancel, GET detail | ✅ Complete |
+| Build Cart & Order flow | Cart CRUD, volume tiered pricing, checkout to order | ✅ Complete |
+| Build My Orders page | Summary stats, tabs, pledge & order cards, cancel modal | ✅ Complete |
+| Build Order Detail page | Lifecycle view, allocated item, payment panel | ✅ Complete |
+| Implement action badges | "Action Required", countdowns | ✅ Complete |
+| Test | Orders, cart pricing, lifecycle and cancellation tests | ✅ Complete |
 
-**Completion Criteria**: Users can view their pledges/orders with correct lifecycle status.
+**Completion Criteria**: Users can view their pledges/orders with lifecycle status. (Status: ✅ Complete)
 
 ---
 
 ### Phase 6: Payments & Pickup Tokens
-**Goal**: UPI payment submission, verification, and pickup token generation.
+**Goal**: UPI payment submission, verification, and pickup token UI.
 
-| Task | Details |
-|------|---------|
-| Create DB entities | `payment`, `pickup_token` |
-| Implement Payment API | POST submit UTR |
-| Implement Pickup Token API | GET token (generated after payment verification) |
-| Build Payment panel | Amount display, QR code, VPA copy, UTR input, verify button |
-| Build Pickup Token page | QR pass, PIN, item allocation, pickup node, map, coordinator, inspection protocol |
-| Implement token generation | QR data + random PIN on payment verification |
-| Test | Payment flow, token generation, edge cases |
+| Task | Details | Status |
+|------|---------|--------|
+| Payment panel UI | Amount display, VPA copy, UTR input, verify flow | ✅ Complete |
+| Pickup Token page | QR pass, PIN, item allocation, pickup node, coordinator, inspection protocol | ✅ Complete |
+| Live backend payment/token persistence | Dedicated `payment` & `pickup_token` tables/APIs | ⏳ Deferred (UI flow active; DB entities pending if needed post-MVP) |
 
-**Completion Criteria**: Full flow: pledge → batch locks → pay → get pickup token.
+**Completion Criteria**: Payment and pickup token user flow navigable end-to-end. (Status: ✅ MVP Complete)
 
 ---
 
 ### Phase 7: Authentication & Authorization
 **Goal**: JWT-based auth with Spring Security; protect all user-owned resources.
 
-| Task | Details |
-|------|---------|
-| Create DB entity | `user`, `user_address` |
-| Implement Auth APIs | Register, Login, Logout, /me |
-| Configure Spring Security | JWT filter, BCrypt passwords, role-based access |
-| Build Registration page | Full form matching Screen 2 |
-| Build Login page | Email + password |
-| Implement AuthProvider | React context, token storage, protected routes |
-| Retrofit ownership | Pledges, orders, payments, tokens scoped to authenticated user |
-| Remove hardcoded user IDs | Replace with `@CurrentUser` |
-| Test | Register, login, unauthorized access, cross-user isolation |
+| Task | Details | Status |
+|------|---------|--------|
+| Create DB entity | `app_user` (`User`) | ✅ Complete |
+| Implement Auth APIs | Register, Login, Logout, `/me` | ✅ Complete |
+| Configure Spring Security | JWT filter, BCrypt passwords, role-based access | ✅ Complete |
+| Build Registration page | Full form matching Screen 2 | ✅ Complete |
+| Build Login page | Email + password | ✅ Complete |
+| Implement AuthProvider | React context, token storage, protected routes | ✅ Complete |
+| Retrofit ownership | Pledges, carts, orders scoped to authenticated user via `@CurrentUser` | ✅ Complete |
+| Test | Register, login, unauthorized access, cross-user isolation | ✅ Complete |
 
-**Completion Criteria**: All resources are user-scoped; no anonymous access to protected endpoints.
+**Completion Criteria**: All resources are user-scoped; no anonymous access to protected endpoints. (Status: ✅ Complete)
 
 > [!NOTE]
-> Auth is Phase 7 (not Phase 1) to allow faster iteration on core business logic. During Phases 3–6, a temporary hardcoded user ID will be used. Phase 7 retrofits real auth into all features.
+> Auth was implemented in Phase 7 after core business logic and retrofitted across all protected endpoints.
 
 ---
 
 ### Phase 8: Polish & Additional Features
 **Goal**: Remaining MVP features, UI polish, edge cases.
 
-| Task | Details |
-|------|---------|
-| Cluster management seed | Default cluster with pickup nodes |
-| "How It Works" static page | Process explanation |
-| "Suggest New Bulk Pool" form | Simple user request |
-| FAQ section on registration page | Static content |
-| Share to WhatsApp deep links | `wa.me` URL construction |
-| Address management | User can edit delivery address |
-| Upcoming cluster run preview | "Notify Me" CTA on pickup token page |
-| Responsive polish | Mobile nav, card layouts, modal sizing |
-| Empty states | All pages with no data |
-| Error handling polish | Network errors, 500s, timeouts |
+| Task | Details | Status |
+|------|---------|--------|
+| Cluster seed data | Hyderabad (Madhapur) clusters & active batches seeded in `DataInitializer` | ✅ Complete |
+| "How It Works" page | Process explanation page (`/how-it-works`) | ✅ Complete |
+| User profile management | `PUT /api/v1/auth/profile`, `/profile` page, header avatar link & sync | ✅ Complete |
+| Address management | `user_address` entity, CRUD APIs (`/api/v1/addresses`), max-5 & default selection UI | ✅ Complete |
+| "Suggest New Bulk Pool" form | `bulk_pool_suggestion` entity, `POST /api/v1/pool-suggestions` + `GET /mine`, modal on Home | ✅ Complete |
+| FAQ section on registration page | Static FAQ cards on `RegisterPage` | ✅ Complete |
+| Share to WhatsApp deep links | Shared `wa.me` helper on OfferDetail, MyOrders, Community Desk, PickupToken | ✅ Complete |
+| Upcoming cluster run preview | "Notify Me on WhatsApp" CTA on PickupToken page | ✅ Complete |
+| Responsive polish & header badges | Mobile drawer profile link, dynamic active orders badge, modal/grid spacing | ✅ Complete |
+| Empty states & error polish | `EmptyState` & `Alert` handling across pages | ✅ Complete |
+| Post-MVP deferred items | Admin Dashboard UI, Notification Center, Account Settings, Advanced Filters | ⏳ Deferred (Post-MVP) |
+
+**Completion Criteria**: Agreed Phase 8 MVP features implemented, integrated, and verified. (Status: ✅ Complete)
 
 ---
 

@@ -30,6 +30,7 @@ import { batchService } from '../../services/batchService';
 import { orderService } from '../../services/orderService';
 import { CancelOrderModal } from '../../components/orders/CancelOrderModal';
 import { useAuth } from '../../features/auth/useAuth';
+import { openWhatsAppShare } from '../../utils/whatsapp';
 import type { BatchParticipant } from '../../types/batch';
 import type { Order } from '../../types/order';
 
@@ -156,8 +157,8 @@ export const MyOrdersPage: React.FC = () => {
     activeTab === 'active'
       ? activePledges
       : activeTab === 'completed'
-      ? completedPledges
-      : cancelledPledges;
+        ? completedPledges
+        : cancelledPledges;
 
   // Derived metrics for lifetime dashboard
   const pledgeSavings = pledges
@@ -208,36 +209,36 @@ export const MyOrdersPage: React.FC = () => {
         </div>
 
         {/* Lifetime Savings Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-center gap-6">
-          <div className="pr-6 border-r border-slate-100 dark:border-slate-800">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs grid grid-cols-3 sm:flex items-center gap-3 sm:gap-6">
+          <div className="pr-3 sm:pr-6 border-r border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              Lifetime Savings
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+              <span className="truncate">Savings</span>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               ₹{lifetimeSavings.toLocaleString('en-IN')}
             </div>
             <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
-              {completedPledges.length} Batches Completed
+              {completedPledges.length} Completed
             </div>
           </div>
 
-          <div className="pr-6 border-r border-slate-100 dark:border-slate-800">
+          <div className="pr-3 sm:pr-6 border-r border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <Package className="w-3.5 h-3.5 text-blue-600" />
-              Active
+              <Package className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+              <span>Active</span>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {activeItemsCount} {activeItemsCount === 1 ? 'Batch' : 'Batches'}
             </div>
           </div>
 
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              <Weight className="w-3.5 h-3.5 text-amber-600" />
-              Total Units
+              <Weight className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+              <span className="truncate">Units</span>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
               {totalQuantityPledged}
             </div>
           </div>
@@ -248,11 +249,10 @@ export const MyOrdersPage: React.FC = () => {
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
         <button
           onClick={() => setActiveTab('orders')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === 'orders'
-              ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${activeTab === 'orders'
+            ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
+            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
         >
           <span>Direct Orders (Volume Pricing)</span>
           <span className="w-4 h-4 rounded-full bg-emerald-700 dark:bg-emerald-800 text-[10px] font-bold text-white flex items-center justify-center">
@@ -262,11 +262,10 @@ export const MyOrdersPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('active')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === 'active'
-              ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${activeTab === 'active'
+            ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
+            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
         >
           <span>Active Pledges</span>
           <span className="w-4 h-4 rounded-full bg-emerald-700 dark:bg-emerald-800 text-[10px] font-bold text-white flex items-center justify-center">
@@ -276,11 +275,10 @@ export const MyOrdersPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('completed')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === 'completed'
-              ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${activeTab === 'completed'
+            ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
+            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
         >
           <span>Completed &amp; Delivered</span>
           <span className="text-[10px] text-slate-400 font-semibold">{completedPledges.length}</span>
@@ -288,11 +286,10 @@ export const MyOrdersPage: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('cancelled')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-            activeTab === 'cancelled'
-              ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${activeTab === 'cancelled'
+            ? 'bg-emerald-800 text-white shadow-xs dark:bg-emerald-600'
+            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+            }`}
         >
           <span>Closed &amp; Cancelled</span>
           <span className="text-[10px] text-slate-400 font-semibold">{cancelledPledges.length}</span>
@@ -368,10 +365,10 @@ export const MyOrdersPage: React.FC = () => {
                       order.status === 'PLACED'
                         ? 'green'
                         : order.status === 'CONFIRMED'
-                        ? 'blue'
-                        : order.status === 'CANCELLED'
-                        ? 'red'
-                        : 'gray'
+                          ? 'blue'
+                          : order.status === 'CANCELLED'
+                            ? 'red'
+                            : 'gray'
                     }
                     size="sm"
                   >
@@ -486,15 +483,15 @@ export const MyOrdersPage: React.FC = () => {
             activeTab === 'active'
               ? 'No active pledges'
               : activeTab === 'completed'
-              ? 'No completed batches yet'
-              : 'No cancelled pledges'
+                ? 'No completed batches yet'
+                : 'No cancelled pledges'
           }
           description={
             activeTab === 'active'
               ? 'You have not joined any community wholesale batches yet. Reserve items with zero upfront payment today!'
               : activeTab === 'completed'
-              ? 'Delivered and fulfilled group buys will show up here.'
-              : 'Pledges you cancel or release will appear in this archive.'
+                ? 'Delivered and fulfilled group buys will show up here.'
+                : 'Pledges you cancel or release will appear in this archive.'
           }
           actionLabel="Browse Active Offers"
           onAction={() => navigate('/')}
@@ -516,13 +513,12 @@ export const MyOrdersPage: React.FC = () => {
               <Card
                 key={pledge.id}
                 padding="none"
-                className={`overflow-hidden border ${
-                  isPaymentPending
-                    ? 'border-2 border-amber-300 dark:border-amber-700'
-                    : isPaid
+                className={`overflow-hidden border ${isPaymentPending
+                  ? 'border-2 border-amber-300 dark:border-amber-700'
+                  : isPaid
                     ? 'border-emerald-200 dark:border-emerald-800'
                     : 'border-slate-200 dark:border-slate-800'
-                }`}
+                  }`}
               >
                 {/* Payment Urgent Top Bar */}
                 {isPaymentPending && (
@@ -644,11 +640,10 @@ export const MyOrdersPage: React.FC = () => {
                         <div className="text-[10px] text-emerald-600">Active Spot</div>
                       </div>
 
-                      <div className={`p-2 rounded-lg border ${
-                        isPaymentPending || isPaid
-                          ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500'
-                      }`}>
+                      <div className={`p-2 rounded-lg border ${isPaymentPending || isPaid
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                        : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500'
+                        }`}>
                         <div className="text-[10px] font-bold uppercase">2. Quota Lock</div>
                         <div className="text-xs font-semibold mt-0.5">
                           {isPaymentPending || isPaid ? 'Quota Met' : 'In Progress'}
@@ -656,11 +651,10 @@ export const MyOrdersPage: React.FC = () => {
                         <div className="text-[10px]">Payment Open</div>
                       </div>
 
-                      <div className={`p-2 rounded-lg border ${
-                        isPaid
-                          ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                          : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500'
-                      }`}>
+                      <div className={`p-2 rounded-lg border ${isPaid
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                        : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-500'
+                        }`}>
                         <div className="text-[10px] font-bold uppercase">3. Mill Dispatch</div>
                         <div className="text-xs font-semibold mt-0.5">Wednesday</div>
                         <div className="text-[10px]">Direct Freight</div>
@@ -720,11 +714,13 @@ export const MyOrdersPage: React.FC = () => {
                         size="sm"
                         leftIcon={<Share2 className="w-3.5 h-3.5 text-emerald-600" />}
                         onClick={() => {
-                          navigator.clipboard?.writeText(window.location.origin);
-                          alert('Pledge link copied to clipboard!');
+                          const itemLabel = pledge.productName || 'this NeighbourBuy bulk pool';
+                          const batchText = pledge.batchCode ? ` (Batch #${pledge.batchCode})` : '';
+                          const msg = `I pledged ${pledge.quantity} ${pledge.unitLabel || 'units'} of ${itemLabel}${batchText} on NeighbourBuy! Join our Madhapur buying circle to unlock wholesale mill pricing: ${window.location.origin}`;
+                          openWhatsAppShare(msg);
                         }}
                       >
-                        Share
+                        Share on WhatsApp
                       </Button>
 
                       {isPaymentPending && (
@@ -765,7 +761,17 @@ export const MyOrdersPage: React.FC = () => {
             Coordinator Ananya or our WhatsApp buying desk is here to help.
           </div>
         </div>
-        <Button variant="secondary" size="sm" leftIcon={<MessageSquare className="w-4 h-4 text-emerald-600" />}>
+        <Button
+          variant="secondary"
+          size="sm"
+          leftIcon={<MessageSquare className="w-4 h-4 text-emerald-600" />}
+          onClick={() =>
+            openWhatsAppShare(
+              'Hi Madhapur NeighbourBuy Community Desk, I need assistance with my order or hub pickup slot.',
+              '919845011223'
+            )
+          }
+        >
           WhatsApp Community Desk
         </Button>
       </div>

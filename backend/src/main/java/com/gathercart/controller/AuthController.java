@@ -4,6 +4,7 @@ import com.gathercart.common.ApiResponse;
 import com.gathercart.dto.AuthResponse;
 import com.gathercart.dto.LoginRequest;
 import com.gathercart.dto.RegisterRequest;
+import com.gathercart.dto.UpdateProfileRequest;
 import com.gathercart.dto.UserProfileResponse;
 import com.gathercart.service.AuthService;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +48,14 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser(Authentication authentication) {
         UserProfileResponse profile = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(ApiResponse.success(profile, "User profile retrieved"));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
+            Authentication authentication,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        UserProfileResponse profile = authService.updateProfile(authentication.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success(profile, "Profile updated successfully"));
     }
 }
 

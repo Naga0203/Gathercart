@@ -23,18 +23,35 @@ import {
   Skeleton,
   EmptyState,
   Alert,
+  Modal,
+  Input,
+  Select,
 } from '../../components/common';
 import { productService } from '../../services/productService';
 import { categoryService } from '../../services/categoryService';
 import { batchService } from '../../services/batchService';
+import { poolSuggestionService } from '../../services/poolSuggestionService';
+import { useAuth } from '../../features/auth/useAuth';
 import type { ProductSummary, Category, ProductQueryParams } from '../../types/product';
 import type { BatchResponse } from '../../types/batch';
 import type { PagedResponse } from '../../types/api';
 
 export const HomePage: React.FC = () => {
+  const { user } = useAuth();
+
   // Category state
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+
+  // Suggest New Bulk Pool state
+  const [isSuggestModalOpen, setIsSuggestModalOpen] = useState(false);
+  const [suggestProductName, setSuggestProductName] = useState('');
+  const [suggestCategory, setSuggestCategory] = useState('');
+  const [suggestNotes, setSuggestNotes] = useState('');
+  const [suggestPhone, setSuggestPhone] = useState('');
+  const [isSuggestSubmitting, setIsSuggestSubmitting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [suggestSuccess, setSuggestSuccess] = useState<string | null>(null);
 
   // Search & Sort state
   const [searchTerm, setSearchTerm] = useState('');
@@ -191,6 +208,46 @@ export const HomePage: React.FC = () => {
   const handlePageChange = (newPage: number) => {
     setIsLoading(true);
     fetchProducts(newPage);
+  };
+
+  const handleOpenSuggestModal = () => {
+    setSuggestError(null);
+    if (!suggestPhone && user?.phone) {
+      setSuggestPhone(user.phone);
+    }
+    setIsSuggestModalOpen(true);
+  };
+
+  const handleSuggestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (suggestProductName.trim().length < 2) {
+      setSuggestError('Please enter an item name (at least 2 characters).');
+      return;
+    }
+    setIsSuggestSubmitting(true);
+    setSuggestError(null);
+    try {
+      const created = await poolSuggestionService.createSuggestion({
+        productName: suggestProductName.trim(),
+        category: suggestCategory || undefined,
+        clusterName: 'Madhapur, Hyderabad',
+        notes: suggestNotes.trim() || undefined,
+        contactPhone: suggestPhone.trim() || undefined,
+      });
+      setSuggestSuccess(`Thanks! "${created.productName}" has been submitted for coordinator review.`);
+      setSuggestProductName('');
+      setSuggestCategory('');
+      setSuggestNotes('');
+      setIsSuggestModalOpen(false);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setSuggestError(
+        axiosErr.response?.data?.message ||
+          (err instanceof Error ? err.message : 'Unable to submit suggestion right now.')
+      );
+    } finally {
+      setIsSuggestSubmitting(false);
+    }
   };
 
   return (
@@ -553,25 +610,118 @@ export const HomePage: React.FC = () => {
       )}
 
       {/* Suggest New Bulk Pool Banner */}
-      <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 text-center sm:text-left">
-          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-2xs flex-shrink-0">
-            🌾
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              Want to propose an item for Hyderabad?
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Request a wholesale bulk slot for your apartment building or community association in Madhapur or Gachibowli.
-            </p>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 space-y-4">
+        {suggestSuccess && (
+          <Alert variant="success" title="Pool Suggestion Received" onDismiss={() => setSuggestSuccess(null)}>
+            {suggestSuccess}
+          </Alert>
+        )}
 
-        <Button variant="outline" size="sm" className="whitespace-nowrap">
-          Suggest New Bulk Pool
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shadow-2xs flex-shrink-0">
+              🌾
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Want to propose an item for Hyderabad?
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Request a wholesale bulk slot for your apartment building or community association in Madhapur or Gachibowli.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="whitespace-nowrap"
+            onClick={handleOpenSuggestModal}
+          >
+            Suggest New Bulk Pool
+          </Button>
+        </div>
       </div>
+
+      {/* Suggest Bulk Pool Modal */}
+      <Modal
+        isOpen={isSuggestModalOpen}
+        onClose={() => setIsSuggestModalOpen(false)}
+        title="Suggest a New Bulk Pool"
+        subtitle="Propose a staple grocery item for your Madhapur neighbourhood circle."
+      >
+        <form onSubmit={handleSuggestSubmit} className="space-y-4">
+          {suggestError && (
+            <Alert variant="error" onDismiss={() => setSuggestError(null)}>
+              {suggestError}
+            </Alert>
+          )}
+
+          <Input
+            label="Item / Product Name"
+            required
+            placeholder="e.g. Organic Khapli Wheat Flour (10 kg)"
+            value={suggestProductName}
+            onChange={(e) => setSuggestProductName(e.target.value)}
+          />
+
+          <Select
+            label="Category (optional)"
+            placeholder="Select a category"
+            value={suggestCategory}
+            onChange={(e) => setSuggestCategory(e.target.value)}
+            options={categories.map((cat) => ({
+              value: cat.name,
+              label: `${cat.icon ? cat.icon + ' ' : ''}${cat.name}`,
+            }))}
+          />
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="suggest-notes"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+            >
+              Pack Size &amp; Apartment Notes (optional)
+            </label>
+            <textarea
+              id="suggest-notes"
+              rows={3}
+              maxLength={500}
+              placeholder="e.g. Interested in 10 kg bags for 15 families in our apartment block"
+              value={suggestNotes}
+              onChange={(e) => setSuggestNotes(e.target.value)}
+              className="block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-600 dark:focus:ring-emerald-950 dark:focus:border-emerald-500 transition"
+            />
+          </div>
+
+          <Input
+            label="WhatsApp / Contact Number (optional)"
+            placeholder="+919876543210"
+            value={suggestPhone}
+            onChange={(e) => setSuggestPhone(e.target.value)}
+          />
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSuggestModalOpen(false)}
+              disabled={isSuggestSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isSuggestSubmitting}
+            >
+              Submit Suggestion
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

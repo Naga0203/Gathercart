@@ -7,3 +7,4 @@ export { HowItWorksPage } from './HowItWorks/HowItWorksPage';
 export { RegisterPage } from './Auth/RegisterPage';
 export { LoginPage } from './Auth/LoginPage';
 export { CartPage } from './Cart/CartPage';
+export { ProfilePage } from './Profile/ProfilePage';

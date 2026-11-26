@@ -55,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal Dialog Container */}
-      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
         <div
           className={`relative transform overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-left shadow-2xl transition-all sm:my-8 w-full ${maxWidthStyles[maxWidth]} border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200`}
           onClick={(e) => e.stopPropagation()}

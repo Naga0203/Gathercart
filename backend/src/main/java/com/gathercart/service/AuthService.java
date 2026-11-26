@@ -3,6 +3,7 @@ package com.gathercart.service;
 import com.gathercart.dto.AuthResponse;
 import com.gathercart.dto.LoginRequest;
 import com.gathercart.dto.RegisterRequest;
+import com.gathercart.dto.UpdateProfileRequest;
 import com.gathercart.dto.UserProfileResponse;
 import com.gathercart.entity.User;
 import com.gathercart.entity.UserRole;
@@ -114,6 +115,29 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        return toProfileResponse(user);
+    }
+
+    @Transactional
+    public UserProfileResponse updateProfile(String email, UpdateProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Check phone uniqueness if changed
+        String newPhone = request.getPhone().trim();
+        if (!newPhone.equals(user.getPhone()) && userRepository.existsByPhone(newPhone)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already registered");
+        }
+
+        user.setFullName(request.getFullName().trim());
+        user.setPhone(newPhone);
+        user = userRepository.save(user);
+        log.info("Updated profile for user: {} (ID: {})", user.getEmail(), user.getId());
+
+        return toProfileResponse(user);
+    }
+
+    private UserProfileResponse toProfileResponse(User user) {
         return UserProfileResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())

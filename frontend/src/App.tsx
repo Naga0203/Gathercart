@@ -11,6 +11,7 @@ import { OrderDetailPage } from './pages/OrderDetail/OrderDetailPage';
 import { PickupTokenPage } from './pages/PickupToken/PickupTokenPage';
 import { HowItWorksPage } from './pages/HowItWorks/HowItWorksPage';
 import { CartPage } from './pages/Cart/CartPage';
+import { ProfilePage } from './pages/Profile/ProfilePage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export function App() {
@@ -32,6 +33,7 @@ export function App() {
 
               {/* Protected Routes — require authentication */}
               <Route element={<ProtectedRoute />}>
+                <Route path="profile" element={<ProfilePage />} />
                 <Route path="cart" element={<CartPage />} />
                 <Route path="orders" element={<MyOrdersPage />} />
                 <Route path="orders/:id" element={<OrderDetailPage />} />

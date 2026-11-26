@@ -3,6 +3,7 @@ package com.gathercart.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gathercart.dto.LoginRequest;
 import com.gathercart.dto.RegisterRequest;
+import com.gathercart.dto.UpdateProfileRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -198,6 +199,76 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/v1/products"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void updateProfile_withValidData_shouldUpdateAndReturnProfile() throws Exception {
+        RegisterRequest regReq = RegisterRequest.builder()
+                .fullName("Old Name")
+                .phone("+919000000010")
+                .email("profileupdate@example.com")
+                .password("password123")
+                .agreedToTerms(true)
+                .build();
+        MvcResult regResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regReq)))
+                .andReturn();
+        String token = objectMapper.readTree(regResult.getResponse().getContentAsString())
+                .at("/data/token").asText();
+
+        UpdateProfileRequest updateReq = UpdateProfileRequest.builder()
+                .fullName("Updated Name")
+                .phone("+919000000011")
+                .build();
+
+        mockMvc.perform(put("/api/v1/auth/profile")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fullName").value("Updated Name"))
+                .andExpect(jsonPath("$.data.phone").value("+919000000011"));
+    }
+
+    @Test
+    void updateProfile_withExistingPhone_shouldReturn409() throws Exception {
+        RegisterRequest user1 = RegisterRequest.builder()
+                .fullName("User One")
+                .phone("+919000000012")
+                .email("user1phone@example.com")
+                .password("password123")
+                .agreedToTerms(true)
+                .build();
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(user1)))
+                .andExpect(status().isCreated());
+
+        RegisterRequest user2 = RegisterRequest.builder()
+                .fullName("User Two")
+                .phone("+919000000013")
+                .email("user2phone@example.com")
+                .password("password123")
+                .agreedToTerms(true)
+                .build();
+        MvcResult res2 = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(user2)))
+                .andReturn();
+        String token2 = objectMapper.readTree(res2.getResponse().getContentAsString())
+                .at("/data/token").asText();
+
+        UpdateProfileRequest conflictReq = UpdateProfileRequest.builder()
+                .fullName("User Two")
+                .phone("+919000000012")
+                .build();
+
+        mockMvc.perform(put("/api/v1/auth/profile")
+                        .header("Authorization", "Bearer " + token2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(conflictReq)))
+                .andExpect(status().isConflict());
     }
 }
 

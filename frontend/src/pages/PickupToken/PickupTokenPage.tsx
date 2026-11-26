@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -19,8 +19,11 @@ import {
   Button,
   Card,
 } from '../../components/common';
+import { openWhatsAppShare } from '../../utils/whatsapp';
 
 export const PickupTokenPage: React.FC = () => {
+  const [notifiedUpcoming, setNotifiedUpcoming] = useState(false);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Breadcrumb & Navigation */}
@@ -154,7 +157,11 @@ export const PickupTokenPage: React.FC = () => {
                   size="sm"
                   leftIcon={<Share2 className="w-4 h-4 text-white" />}
                   className="bg-emerald-700 hover:bg-emerald-800"
-                  onClick={() => alert('Opening WhatsApp to share token with family member.')}
+                  onClick={() =>
+                    openWhatsAppShare(
+                      'NeighbourBuy Hub Pickup Pass (#NB-CMT-102-GHEE) — Batch #IND-398\nBackup PIN: PKP - 9842\nHub: Madhapur Community Hub - Gate 1\nWindow: Today, 2:00 PM - 7:30 PM'
+                    )
+                  }
                 >
                   Forward on WhatsApp
                 </Button>
@@ -284,7 +291,12 @@ export const PickupTokenPage: React.FC = () => {
                 size="sm"
                 leftIcon={<MessageSquare className="w-3.5 h-3.5 text-white" />}
                 className="bg-emerald-700 hover:bg-emerald-800"
-                onClick={() => window.open('https://wa.me/919845011223', '_blank')}
+                onClick={() =>
+                  openWhatsAppShare(
+                    'Hi Suresh, checking on my Madhapur Hub pickup for #NB-CMT-102-GHEE.',
+                    '919845011223'
+                  )
+                }
               >
                 WhatsApp
               </Button>
@@ -361,13 +373,27 @@ export const PickupTokenPage: React.FC = () => {
         </div>
 
         <Button
-          variant="outline"
+          variant={notifiedUpcoming ? 'secondary' : 'outline'}
           size="sm"
-          leftIcon={<MessageSquare className="w-4 h-4 text-emerald-600" />}
+          leftIcon={
+            notifiedUpcoming ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <MessageSquare className="w-4 h-4 text-emerald-600" />
+            )
+          }
           className="whitespace-nowrap"
-          onClick={() => alert('Subscribed to WhatsApp notification for Friday cluster run!')}
+          onClick={() => {
+            if (!notifiedUpcoming) {
+              setNotifiedUpcoming(true);
+              openWhatsAppShare(
+                'Hi NeighbourBuy Madhapur Hub, please notify me when Friday\'s Wood Cold-Pressed Groundnut Oil (5 L Tin) cluster run opens!',
+                '919845011223'
+              );
+            }
+          }}
         >
-          Notify Me on WhatsApp
+          {notifiedUpcoming ? 'WhatsApp Alert Requested' : 'Notify Me on WhatsApp'}
         </Button>
       </div>
     </div>

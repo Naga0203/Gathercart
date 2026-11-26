@@ -9,6 +9,11 @@ export interface AuthUser {
   penaltyCount?: number;
 }
 
+export interface UpdateProfilePayload {
+  fullName: string;
+  phone: string;
+}
+
 export interface LoginPayload {
   email: string;
   password: string;

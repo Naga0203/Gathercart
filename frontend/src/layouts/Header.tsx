@@ -3,6 +3,8 @@ import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, ShoppingBag, ShoppingCart, Menu, X, User, Check, LogOut } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { cartService } from '../services/cartService';
+import { batchService } from '../services/batchService';
+import { orderService } from '../services/orderService';
 import { useAuth } from '../features/auth/useAuth';
 
 export const Header: React.FC = () => {
@@ -13,6 +15,7 @@ export const Header: React.FC = () => {
   const [clusterDropdownOpen, setClusterDropdownOpen] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState('Madhapur, Hyderabad – 500081');
   const [cartTotalItems, setCartTotalItems] = useState<number>(0);
+  const [activeOrdersCount, setActiveOrdersCount] = useState<number>(0);
   const clusterDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,6 +25,19 @@ export const Header: React.FC = () => {
       .then((cart) => setCartTotalItems(cart.totalItems))
       .catch(() => {});
 
+    Promise.all([
+      batchService.getMyPledges().catch(() => []),
+      orderService.getUserOrders().catch(() => []),
+    ]).then(([pledges, orders]) => {
+      const activePledges = pledges.filter(
+        (p) => p.status === 'ACTIVE' || p.status === 'PAYMENT_PENDING'
+      ).length;
+      const activeOrders = orders.filter(
+        (o) => o.status !== 'CANCELLED' && o.status !== 'DELIVERED'
+      ).length;
+      setActiveOrdersCount(activePledges + activeOrders);
+    });
+
     const cleanup = cartService.onCartUpdated((cart) => {
       setCartTotalItems(cart.totalItems);
     });
@@ -29,6 +45,7 @@ export const Header: React.FC = () => {
   }, [isAuthenticated]);
 
   const displayCartItems = isAuthenticated ? cartTotalItems : 0;
+  const displayOrdersCount = isAuthenticated ? activeOrdersCount : 0;
 
   const availableClusters = [
     { name: 'Madhapur, Hyderabad – 500081', activePools: 6, families: 284 },
@@ -189,9 +206,11 @@ export const Header: React.FC = () => {
               }
             >
               <span>My Orders</span>
-              <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-center">
-                2
-              </span>
+              {displayOrdersCount > 0 && (
+                <span className="min-w-4 h-4 px-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold flex items-center justify-center">
+                  {displayOrdersCount}
+                </span>
+              )}
             </NavLink>
           </nav>
 
@@ -201,14 +220,17 @@ export const Header: React.FC = () => {
 
             {isAuthenticated ? (
               <div className="hidden sm:flex items-center gap-2">
-                <div className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 p-1.5 pr-3 rounded-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                >
                   <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shadow-xs">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
                     {displayName}
                   </span>
-                </div>
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -319,17 +341,23 @@ export const Header: React.FC = () => {
               }
             >
               <span>My Orders</span>
-              <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
-                2
-              </span>
+              {displayOrdersCount > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center">
+                  {displayOrdersCount}
+                </span>
+              )}
             </NavLink>
 
             {isAuthenticated ? (
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
-                <div className="flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
                   <User className="w-4 h-4 text-emerald-600" />
                   <span>{displayName}</span>
-                </div>
+                </Link>
                 <button
                   type="button"
                   onClick={() => {

@@ -1,6 +1,6 @@
 import apiClient from './api';
 import type { ApiResponse } from '../types/api';
-import type { AuthResponse, LoginPayload, RegisterPayload, AuthUser } from '../types/auth';
+import type { AuthResponse, LoginPayload, RegisterPayload, AuthUser, UpdateProfilePayload } from '../types/auth';
 
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthResponse> {
@@ -27,6 +27,14 @@ export const authService = {
     const res = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
     if (!res.data.data) {
       throw new Error(res.data.message || 'Failed to get user profile');
+    }
+    return res.data.data;
+  },
+
+  async updateProfile(payload: UpdateProfilePayload): Promise<AuthUser> {
+    const res = await apiClient.put<ApiResponse<AuthUser>>('/auth/profile', payload);
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Failed to update profile');
     }
     return res.data.data;
   },
