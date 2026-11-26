@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Package,
   Sparkles,
+  XCircle,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -17,6 +18,7 @@ import {
   Alert,
 } from '../../components/common';
 import { orderService } from '../../services/orderService';
+import { CancelOrderModal } from '../../components/orders/CancelOrderModal';
 import type { Order } from '../../types/order';
 
 export const OrderDetailPage: React.FC = () => {
@@ -25,6 +27,7 @@ export const OrderDetailPage: React.FC = () => {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const [utrNumber, setUtrNumber] = useState('429810239410');
   const [copied, setCopied] = useState(false);
@@ -100,7 +103,18 @@ export const OrderDetailPage: React.FC = () => {
         <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant="green" size="sm">
+              <Badge
+                variant={
+                  order.status === 'PLACED'
+                    ? 'green'
+                    : order.status === 'CONFIRMED'
+                    ? 'blue'
+                    : order.status === 'CANCELLED'
+                    ? 'red'
+                    : 'gray'
+                }
+                size="sm"
+              >
                 ORDER {order.status}
               </Badge>
               <Badge variant={order.fulfillmentType === 'STORE_PICKUP' ? 'green' : 'blue'} size="sm">
@@ -120,16 +134,62 @@ export const OrderDetailPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="text-right flex-shrink-0 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
-            <div className="text-[10px] uppercase font-bold text-slate-400">Total Amount</div>
-            <div className="text-2xl font-black text-emerald-800 dark:text-emerald-400 font-mono">
-              ₹{order.finalTotal.toLocaleString('en-IN')}
+          <div className="flex flex-col items-end gap-2 self-stretch sm:self-auto">
+            <div className="text-right flex-shrink-0 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800 w-full sm:w-auto">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Total Amount</div>
+              <div className="text-2xl font-black text-emerald-800 dark:text-emerald-400 font-mono">
+                ₹{order.finalTotal.toLocaleString('en-IN')}
+              </div>
+              <div className="text-[10px] text-emerald-600 font-semibold">
+                Saved ₹{order.discountAmount.toLocaleString('en-IN')} with bulk wholesale discount
+              </div>
             </div>
-            <div className="text-[10px] text-emerald-600 font-semibold">
-              Saved ₹{order.discountAmount.toLocaleString('en-IN')} with bulk wholesale discount
-            </div>
+
+            {(order.status === 'PLACED' || order.status === 'CONFIRMED') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="text-rose-600 hover:text-rose-700 hover:border-rose-300 dark:text-rose-400 w-full sm:w-auto"
+                leftIcon={<XCircle className="w-3.5 h-3.5" />}
+              >
+                Cancel Order
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Cancellation Alert Banner */}
+        {order.status === 'CANCELLED' && (
+          <div className="rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50/80 dark:bg-rose-950/40 p-5 space-y-2.5 text-rose-900 dark:text-rose-200">
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <XCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+              <span>Order Cancelled &amp; Refund Initiated</span>
+            </div>
+            <p className="text-xs text-rose-800 dark:text-rose-300">
+              This order was cancelled on{' '}
+              {order.cancelledAt
+                ? new Date(order.cancelledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                : 'file'}
+              . Reason: <span className="font-semibold italic">"{order.cancellationReason || 'Customer requested cancellation'}"</span>
+            </p>
+            <div className="pt-2 border-t border-rose-200/80 dark:border-rose-800/80 flex flex-wrap items-center gap-4 text-xs font-semibold">
+              <span>Order Total Paid: ₹{order.finalTotal.toLocaleString('en-IN')}</span>
+              <span>
+                Cancellation Fee:{' '}
+                {order.cancellationFee && order.cancellationFee > 0
+                  ? `₹${order.cancellationFee.toFixed(2)}`
+                  : '₹0.00 (Free)'}
+              </span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                Net Refund: ₹{(order.refundAmount !== undefined ? order.refundAmount : order.finalTotal).toLocaleString('en-IN')}
+              </span>
+              <span className="text-slate-500 text-[11px] font-normal">
+                Payment Status: {order.paymentStatus || 'REFUNDED'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* 2-Column Details Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -255,11 +315,31 @@ export const OrderDetailPage: React.FC = () => {
                 </div>
 
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-baseline font-bold text-sm text-slate-900 dark:text-white">
-                  <span>Total Payable:</span>
+                  <span>{order.status === 'CANCELLED' ? 'Order Total:' : 'Total Payable:'}</span>
                   <span className="text-lg font-black">
                     ₹{order.finalTotal.toLocaleString('en-IN')}
                   </span>
                 </div>
+
+                {order.status === 'CANCELLED' && (
+                  <>
+                    <div className="flex justify-between text-xs text-amber-600 dark:text-amber-400">
+                      <span>Cancellation Fee:</span>
+                      <span className="font-semibold">
+                        {order.cancellationFee && order.cancellationFee > 0
+                          ? `- ₹${order.cancellationFee.toFixed(2)}`
+                          : '₹0.00 (Free)'}
+                      </span>
+                    </div>
+
+                    <div className="pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-800 flex justify-between items-baseline font-bold text-sm text-emerald-700 dark:text-emerald-400">
+                      <span>Net Refund:</span>
+                      <span className="text-lg font-black font-mono">
+                        ₹{(order.refundAmount !== undefined ? order.refundAmount : order.finalTotal).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
 
@@ -272,25 +352,50 @@ export const OrderDetailPage: React.FC = () => {
                 </h4>
               </div>
 
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Zero advance money charged today. Pay securely via UPI when collecting at the hub or at doorstep delivery.
-              </p>
+              {order.status === 'CANCELLED' ? (
+                <div className="text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
+                  <div className="font-bold text-rose-700 dark:text-rose-400">
+                    Status: {order.paymentStatus || 'REFUNDED'}
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Refund of ₹{(order.refundAmount !== undefined ? order.refundAmount : order.finalTotal).toLocaleString('en-IN')} has been authorized to your original payment channel.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Zero advance money charged today. Pay securely via UPI when collecting at the hub or at doorstep delivery.
+                  </p>
 
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-                <span className="font-mono text-slate-700 dark:text-slate-300">
-                  coop.saurashtra@okhdfcbank
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyVpa}
-                  className="text-emerald-600 hover:text-emerald-700 text-[11px] font-bold cursor-pointer"
-                >
-                  {copied ? 'Copied!' : 'Copy VPA'}
-                </button>
-              </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                    <span className="font-mono text-slate-700 dark:text-slate-300">
+                      coop.saurashtra@okhdfcbank
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyVpa}
+                      className="text-emerald-600 hover:text-emerald-700 text-[11px] font-bold cursor-pointer"
+                    >
+                      {copied ? 'Copied!' : 'Copy VPA'}
+                    </button>
+                  </div>
+                </>
+              )}
             </Card>
           </div>
         </div>
+
+        {/* Cancel Order Modal */}
+        {isCancelModalOpen && (
+          <CancelOrderModal
+            isOpen={isCancelModalOpen}
+            onClose={() => setIsCancelModalOpen(false)}
+            order={order}
+            onSuccess={(updatedOrder) => {
+              setOrder(updatedOrder);
+            }}
+          />
+        )}
       </div>
     );
   }

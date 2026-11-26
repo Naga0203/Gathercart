@@ -2,6 +2,7 @@ package com.gathercart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gathercart.config.WebConfig;
+import com.gathercart.dto.CancelOrderRequest;
 import com.gathercart.dto.OrderItemResponse;
 import com.gathercart.dto.OrderResponse;
 import com.gathercart.entity.FulfillmentType;
@@ -31,6 +32,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -152,6 +155,37 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(501))
                 .andExpect(jsonPath("$.data.finalTotal").value(4800.00));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/orders/{id}/cancel - cancels order successfully")
+    void cancelOrder_success() throws Exception {
+        OrderResponse cancelledResponse = OrderResponse.builder()
+                .id(501L)
+                .orderNumber("GC-ORD-20261123-1234")
+                .userId(1L)
+                .status(OrderStatus.CANCELLED)
+                .paymentStatus("REFUNDED")
+                .cancellationFee(new BigDecimal("50.00"))
+                .refundAmount(new BigDecimal("4750.00"))
+                .cancellationReason("Changed my mind")
+                .cancelledAt(LocalDateTime.now())
+                .items(List.of())
+                .build();
+
+        CancelOrderRequest req = CancelOrderRequest.builder().reason("Changed my mind").build();
+        when(orderService.cancelOrder(eq(501L), eq(1L), any(CancelOrderRequest.class))).thenReturn(cancelledResponse);
+
+        mockMvc.perform(post("/api/v1/orders/501/cancel")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.paymentStatus").value("REFUNDED"))
+                .andExpect(jsonPath("$.data.cancellationFee").value(50.00))
+                .andExpect(jsonPath("$.data.refundAmount").value(4750.00))
+                .andExpect(jsonPath("$.data.cancellationReason").value("Changed my mind"));
     }
 }
 

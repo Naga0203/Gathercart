@@ -1,5 +1,6 @@
 package com.gathercart.service;
 
+import com.gathercart.dto.CancelOrderRequest;
 import com.gathercart.dto.OrderItemResponse;
 import com.gathercart.dto.OrderResponse;
 import com.gathercart.entity.Cart;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -155,6 +157,48 @@ public class OrderServiceImpl implements OrderService {
         return mapToOrderResponse(order);
     }
 
+    @Override
+    public OrderResponse cancelOrder(Long orderId, Long userId, CancelOrderRequest request) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        if (order.getStatus() != OrderStatus.PLACED && order.getStatus() != OrderStatus.CONFIRMED) {
+            throw new BusinessException("Order cannot be cancelled in status: " + order.getStatus());
+        }
+
+        LocalDateTime orderTime = order.getCreatedAt() != null ? order.getCreatedAt() : LocalDateTime.now();
+        long minutesElapsed = Duration.between(orderTime, LocalDateTime.now()).toMinutes();
+
+        BigDecimal finalTotal = order.getFinalTotal() != null ? order.getFinalTotal() : BigDecimal.ZERO;
+        BigDecimal fee;
+
+        if (minutesElapsed <= 120) {
+            fee = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        } else {
+            // Late cancellation fee: flat 50.00, capped at order final total
+            fee = finalTotal.min(new BigDecimal("50.00")).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal refund = finalTotal.subtract(fee).setScale(2, RoundingMode.HALF_UP);
+
+        String reason = (request != null && request.getReason() != null && !request.getReason().trim().isBlank())
+                ? request.getReason().trim()
+                : "Customer requested cancellation";
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setPaymentStatus("REFUNDED");
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancellationFee(fee);
+        order.setRefundAmount(refund);
+        order.setCancellationReason(reason);
+
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order {} cancelled by user {}. Fee: ₹{}, Refund: ₹{}",
+                savedOrder.getOrderNumber(), userId, fee, refund);
+
+        return mapToOrderResponse(savedOrder);
+    }
+
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderItemResponse> itemResponses = order.getItems().stream()
                 .map(item -> OrderItemResponse.builder()
@@ -187,6 +231,10 @@ public class OrderServiceImpl implements OrderService {
                 .finalTotal(order.getFinalTotal())
                 .paymentMethod(order.getPaymentMethod())
                 .paymentStatus(order.getPaymentStatus())
+                .cancellationFee(order.getCancellationFee())
+                .refundAmount(order.getRefundAmount())
+                .cancellationReason(order.getCancellationReason())
+                .cancelledAt(order.getCancelledAt())
                 .items(itemResponses)
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())

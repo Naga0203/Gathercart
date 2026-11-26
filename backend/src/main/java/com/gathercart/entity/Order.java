@@ -74,6 +74,19 @@ public class Order extends BaseEntity {
     @Builder.Default
     private String paymentStatus = "PENDING";
 
+    @Column(name = "cancelled_at")
+    private java.time.LocalDateTime cancelledAt;
+
+    @Column(name = "cancellation_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal cancellationFee = BigDecimal.ZERO;
+
+    @Column(name = "refund_amount", precision = 10, scale = 2)
+    private BigDecimal refundAmount;
+
+    @Column(name = "cancellation_reason", length = 500)
+    private String cancellationReason;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")
     @Builder.Default

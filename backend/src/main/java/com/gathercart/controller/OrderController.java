@@ -1,6 +1,7 @@
 package com.gathercart.controller;
 
 import com.gathercart.common.ApiResponse;
+import com.gathercart.dto.CancelOrderRequest;
 import com.gathercart.dto.OrderResponse;
 import com.gathercart.entity.User;
 import com.gathercart.security.CurrentUser;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -46,6 +48,15 @@ public class OrderController {
         User user = currentUser.require();
         OrderResponse order = orderService.getOrderById(id, user.getId());
         return ResponseEntity.ok(ApiResponse.success(order, "Order retrieved successfully"));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @PathVariable Long id,
+            @RequestBody(required = false) CancelOrderRequest request) {
+        User user = currentUser.require();
+        OrderResponse response = orderService.cancelOrder(id, user.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success(response, "Order cancelled successfully"));
     }
 }
 

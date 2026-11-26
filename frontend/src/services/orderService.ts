@@ -1,6 +1,6 @@
 import apiClient from './api';
 import type { ApiResponse } from '../types/api';
-import type { Order } from '../types/order';
+import type { CancelOrderPayload, Order } from '../types/order';
 
 export const orderService = {
   checkout: async (): Promise<Order> => {
@@ -20,6 +20,14 @@ export const orderService = {
     const res = await apiClient.get<ApiResponse<Order>>(`/orders/${id}`);
     if (!res.data.data) {
       throw new Error(res.data.message || 'Order not found');
+    }
+    return res.data.data;
+  },
+
+  cancelOrder: async (id: number | string, payload?: CancelOrderPayload): Promise<Order> => {
+    const res = await apiClient.post<ApiResponse<Order>>(`/orders/${id}/cancel`, payload || {});
+    if (!res.data.data) {
+      throw new Error(res.data.message || 'Failed to cancel order');
     }
     return res.data.data;
   },

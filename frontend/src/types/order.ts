@@ -38,8 +38,17 @@ export interface Order {
   finalTotal: number;
   paymentMethod: string;
   paymentStatus: string;
+  cancellationFee?: number;
+  refundAmount?: number;
+  cancellationReason?: string;
+  cancelledAt?: string;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CancelOrderPayload {
+  reason?: string;
+}
+
 

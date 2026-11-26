@@ -80,39 +80,57 @@ public class DataInitializer implements CommandLineRunner {
                 log.info("Updated product image for: {}", product.getName());
             }
 
+            int targetQty = 25;
+            int currentQty = 15;
+            String batchCode = "HYD-" + (400 + product.getId().intValue());
+
+            if (name.contains("Mango Pulp")) {
+                targetQty = 25;
+                currentQty = 20; // 80% met as expected
+                batchCode = "HYD-406";
+            } else if (name.contains("Ghee")) {
+                targetQty = 15;
+                currentQty = 12; // 80% met
+                batchCode = "HYD-405";
+            } else if (name.contains("Toor Dal")) {
+                targetQty = 25;
+                currentQty = 14;
+                batchCode = "HYD-404";
+            } else if (name.contains("Walnuts")) {
+                targetQty = 20;
+                currentQty = 8;
+                batchCode = "HYD-403";
+            } else if (name.contains("Oil")) {
+                targetQty = 15;
+                currentQty = 11;
+                batchCode = "HYD-402";
+            } else if (name.contains("Rice")) {
+                targetQty = 25;
+                currentQty = 18;
+                batchCode = "HYD-401";
+            }
+
             // Ensure an active batch exists for this product in Hyderabad
-            List<com.gathercart.entity.GroupPurchase> existingBatches = groupPurchaseRepository.findActiveByProductId(product.getId());
-            if (existingBatches.isEmpty()) {
-                int targetQty = 25;
-                int currentQty = 15;
-                String batchCode = "HYD-" + (400 + product.getId().intValue());
-
-                if (name.contains("Mango Pulp")) {
-                    targetQty = 25;
-                    currentQty = 20; // 80% met as expected
-                    batchCode = "HYD-406";
-                } else if (name.contains("Ghee")) {
-                    targetQty = 15;
-                    currentQty = 12; // 80% met
-                    batchCode = "HYD-405";
-                } else if (name.contains("Toor Dal")) {
-                    targetQty = 25;
-                    currentQty = 14;
-                    batchCode = "HYD-404";
-                } else if (name.contains("Walnuts")) {
-                    targetQty = 20;
-                    currentQty = 8;
-                    batchCode = "HYD-403";
-                } else if (name.contains("Oil")) {
-                    targetQty = 15;
-                    currentQty = 11;
-                    batchCode = "HYD-402";
-                } else if (name.contains("Rice")) {
-                    targetQty = 25;
-                    currentQty = 18;
-                    batchCode = "HYD-401";
+            java.util.Optional<com.gathercart.entity.GroupPurchase> existingByCode = groupPurchaseRepository.findByBatchCode(batchCode);
+            if (existingByCode.isPresent()) {
+                com.gathercart.entity.GroupPurchase batch = existingByCode.get();
+                boolean modified = false;
+                if (batch.getClusterName() == null || batch.getClusterName().contains("Indiranagar")) {
+                    batch.setClusterName("Madhapur, Hyderabad");
+                    batch.setHubDropLocation("Madhapur Community Hub – Gate 1, Near Cyber Towers, Hyderabad");
+                    batch.setLeadOrganiser("Coordinator Ananya S. (Cyber Towers Hub)");
+                    modified = true;
                 }
-
+                if (batch.getStatus() == com.gathercart.entity.GroupPurchaseStatus.OPEN &&
+                        (batch.getDeadline() == null || !batch.getDeadline().isAfter(java.time.LocalDateTime.now()))) {
+                    batch.setDeadline(java.time.LocalDateTime.now().plusDays(4));
+                    log.info("Refreshed expired deadline for active batch {} to {}", batch.getBatchCode(), batch.getDeadline());
+                    modified = true;
+                }
+                if (modified) {
+                    groupPurchaseRepository.save(batch);
+                }
+            } else {
                 com.gathercart.entity.GroupPurchase batch = com.gathercart.entity.GroupPurchase.builder()
                         .batchCode(batchCode)
                         .product(product)
@@ -130,16 +148,6 @@ public class DataInitializer implements CommandLineRunner {
 
                 groupPurchaseRepository.save(batch);
                 log.info("Provisioned active Hyderabad batch {} for product {}", batchCode, product.getName());
-            } else {
-                // Update cluster details on existing batches
-                for (com.gathercart.entity.GroupPurchase batch : existingBatches) {
-                    if (batch.getClusterName() == null || batch.getClusterName().contains("Indiranagar")) {
-                        batch.setClusterName("Madhapur, Hyderabad");
-                        batch.setHubDropLocation("Madhapur Community Hub – Gate 1, Near Cyber Towers, Hyderabad");
-                        batch.setLeadOrganiser("Coordinator Ananya S. (Cyber Towers Hub)");
-                        groupPurchaseRepository.save(batch);
-                    }
-                }
             }
         }
     }

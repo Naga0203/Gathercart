@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   RefreshCw,
   CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -27,6 +28,7 @@ import {
 } from '../../components/common';
 import { batchService } from '../../services/batchService';
 import { orderService } from '../../services/orderService';
+import { CancelOrderModal } from '../../components/orders/CancelOrderModal';
 import { useAuth } from '../../features/auth/useAuth';
 import type { BatchParticipant } from '../../types/batch';
 import type { Order } from '../../types/order';
@@ -38,6 +40,7 @@ export const MyOrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'orders' | 'active' | 'completed' | 'cancelled'>('orders');
   const [pledges, setPledges] = useState<BatchParticipant[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(() => isAuthenticated);
   const [error, setError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -360,13 +363,54 @@ export const MyOrdersPage: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={order.status === 'PLACED' ? 'green' : 'gray'} size="sm">
+                  <Badge
+                    variant={
+                      order.status === 'PLACED'
+                        ? 'green'
+                        : order.status === 'CONFIRMED'
+                        ? 'blue'
+                        : order.status === 'CANCELLED'
+                        ? 'red'
+                        : 'gray'
+                    }
+                    size="sm"
+                  >
                     {order.status}
                   </Badge>
                 </div>
               </div>
 
               <div className="p-5 space-y-4">
+                {order.status === 'CANCELLED' && (
+                  <div className="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-3 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                        <span>Order Cancelled &amp; Refunded</span>
+                      </span>
+                      {order.cancelledAt && (
+                        <span className="font-normal text-[11px] opacity-80">
+                          {new Date(order.cancelledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 text-[11px]">
+                      <span>
+                        Net Refund: <strong>₹{(order.refundAmount !== undefined ? order.refundAmount : order.finalTotal).toLocaleString('en-IN')}</strong>
+                      </span>
+                      {order.cancellationFee !== undefined && order.cancellationFee > 0 && (
+                        <span>
+                          Late Fee: <strong>₹{order.cancellationFee.toFixed(2)}</strong>
+                        </span>
+                      )}
+                      {order.cancellationReason && (
+                        <span className="truncate">
+                          Reason: <em>{order.cancellationReason}</em>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {order.items.map((item) => (
                     <div key={item.id} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
@@ -408,11 +452,25 @@ export const MyOrdersPage: React.FC = () => {
                     )}
                   </div>
 
-                  <Link to={`/orders/${order.id}`}>
-                    <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                      View Order &amp; Handover Details
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {(order.status === 'PLACED' || order.status === 'CONFIRMED') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCancellingOrder(order)}
+                        className="text-rose-600 hover:text-rose-700 hover:border-rose-300 dark:text-rose-400 dark:hover:border-rose-800"
+                        leftIcon={<XCircle className="w-3.5 h-3.5" />}
+                      >
+                        Cancel Order
+                      </Button>
+                    )}
+
+                    <Link to={`/orders/${order.id}`}>
+                      <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                        View Order &amp; Handover Details
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -711,6 +769,20 @@ export const MyOrdersPage: React.FC = () => {
           WhatsApp Community Desk
         </Button>
       </div>
+
+      {/* Cancel Order Modal */}
+      {cancellingOrder && (
+        <CancelOrderModal
+          isOpen={Boolean(cancellingOrder)}
+          onClose={() => setCancellingOrder(null)}
+          order={cancellingOrder}
+          onSuccess={(updatedOrder) => {
+            setOrders((prev) =>
+              prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

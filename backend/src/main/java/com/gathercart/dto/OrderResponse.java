@@ -30,6 +30,10 @@ public class OrderResponse {
     private BigDecimal finalTotal;
     private String paymentMethod;
     private String paymentStatus;
+    private BigDecimal cancellationFee;
+    private BigDecimal refundAmount;
+    private String cancellationReason;
+    private LocalDateTime cancelledAt;
     private List<OrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

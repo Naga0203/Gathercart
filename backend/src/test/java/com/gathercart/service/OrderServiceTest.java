@@ -1,5 +1,6 @@
 package com.gathercart.service;
 
+import com.gathercart.dto.CancelOrderRequest;
 import com.gathercart.dto.OrderResponse;
 import com.gathercart.entity.Cart;
 import com.gathercart.entity.CartItem;
@@ -22,6 +23,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -205,6 +207,110 @@ class OrderServiceTest {
         when(orderRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> orderService.getOrderById(99L, 1L));
+    }
+
+    @Test
+    @DisplayName("cancelOrder - within 2 hours applies zero fee and 100% refund")
+    void cancelOrder_within2Hours_success_zeroFee() {
+        Order order = Order.builder()
+                .orderNumber("GC-ORD-101")
+                .userId(1L)
+                .status(OrderStatus.PLACED)
+                .finalTotal(new BigDecimal("1200.00"))
+                .items(new ArrayList<>())
+                .build();
+        order.setId(101L);
+        order.setCreatedAt(LocalDateTime.now().minusMinutes(30));
+
+        when(orderRepository.findByIdAndUserId(101L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CancelOrderRequest req = CancelOrderRequest.builder().reason("Ordered by mistake").build();
+        OrderResponse response = orderService.cancelOrder(101L, 1L, req);
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        assertEquals("REFUNDED", response.getPaymentStatus());
+        assertEquals(new BigDecimal("0.00"), response.getCancellationFee());
+        assertEquals(new BigDecimal("1200.00"), response.getRefundAmount());
+        assertEquals("Ordered by mistake", response.getCancellationReason());
+        assertNotNull(response.getCancelledAt());
+    }
+
+    @Test
+    @DisplayName("cancelOrder - after 2 hours applies flat ₹50 fee and deducts from refund")
+    void cancelOrder_after2Hours_success_flat50Fee() {
+        Order order = Order.builder()
+                .orderNumber("GC-ORD-102")
+                .userId(1L)
+                .status(OrderStatus.CONFIRMED)
+                .finalTotal(new BigDecimal("1200.00"))
+                .items(new ArrayList<>())
+                .build();
+        order.setId(102L);
+        order.setCreatedAt(LocalDateTime.now().minusMinutes(150)); // 2.5 hours ago
+
+        when(orderRepository.findByIdAndUserId(102L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.cancelOrder(102L, 1L, null);
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        assertEquals("REFUNDED", response.getPaymentStatus());
+        assertEquals(new BigDecimal("50.00"), response.getCancellationFee());
+        assertEquals(new BigDecimal("1150.00"), response.getRefundAmount());
+        assertEquals("Customer requested cancellation", response.getCancellationReason());
+    }
+
+    @Test
+    @DisplayName("cancelOrder - fee is capped at final total if order is under ₹50")
+    void cancelOrder_after2Hours_feeCappedAtFinalTotal() {
+        Order order = Order.builder()
+                .orderNumber("GC-ORD-103")
+                .userId(1L)
+                .status(OrderStatus.PLACED)
+                .finalTotal(new BigDecimal("35.00"))
+                .items(new ArrayList<>())
+                .build();
+        order.setId(103L);
+        order.setCreatedAt(LocalDateTime.now().minusHours(3));
+
+        when(orderRepository.findByIdAndUserId(103L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        OrderResponse response = orderService.cancelOrder(103L, 1L, new CancelOrderRequest(""));
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("35.00"), response.getCancellationFee());
+        assertEquals(new BigDecimal("0.00"), response.getRefundAmount());
+    }
+
+    @Test
+    @DisplayName("cancelOrder - throws BusinessException when order is in non-cancellable status")
+    void cancelOrder_invalidStatus_throwsBusinessException() {
+        Order order = Order.builder()
+                .orderNumber("GC-ORD-104")
+                .userId(1L)
+                .status(OrderStatus.PROCESSING)
+                .finalTotal(new BigDecimal("500.00"))
+                .items(new ArrayList<>())
+                .build();
+        order.setId(104L);
+        order.setCreatedAt(LocalDateTime.now().minusMinutes(10));
+
+        when(orderRepository.findByIdAndUserId(104L, 1L)).thenReturn(Optional.of(order));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> orderService.cancelOrder(104L, 1L, null));
+        assertTrue(ex.getMessage().contains("Order cannot be cancelled in status: PROCESSING"));
+    }
+
+    @Test
+    @DisplayName("cancelOrder - throws ResourceNotFoundException when order does not belong to user")
+    void cancelOrder_notFound_throwsResourceNotFoundException() {
+        when(orderRepository.findByIdAndUserId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(999L, 1L, null));
     }
 }
 
