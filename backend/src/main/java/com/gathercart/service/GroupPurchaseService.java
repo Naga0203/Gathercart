@@ -545,11 +545,13 @@ public class GroupPurchaseService {
         if (participant == null)
             return null;
 
+        Long productId = null;
         String productName = null;
         String productImageUrl = null;
         String unitLabel = null;
         if (participant.getGroupPurchase() != null && participant.getGroupPurchase().getProduct() != null) {
             Product p = participant.getGroupPurchase().getProduct();
+            productId = p.getId();
             productName = p.getName();
             productImageUrl = p.getImageUrl();
             unitLabel = p.getUnitLabel();
@@ -559,6 +561,7 @@ public class GroupPurchaseService {
                 .id(participant.getId())
                 .commitmentCode(participant.getCommitmentCode())
                 .groupPurchaseId(participant.getGroupPurchase() != null ? participant.getGroupPurchase().getId() : null)
+                .productId(productId)
                 .batchCode(
                         participant.getGroupPurchase() != null ? participant.getGroupPurchase().getBatchCode() : null)
                 .displayName(participant.getDisplayName())

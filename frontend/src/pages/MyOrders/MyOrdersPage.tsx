@@ -739,7 +739,7 @@ export const MyOrdersPage: React.FC = () => {
                         </Button>
                       )}
 
-                      <Link to={`/offers/${pledge.groupPurchaseId}`}>
+                      <Link to={`/offers/${pledge.productId ?? pledge.groupPurchaseId}`}>
                         <Button variant="outline" size="sm">
                           Batch Page
                         </Button>

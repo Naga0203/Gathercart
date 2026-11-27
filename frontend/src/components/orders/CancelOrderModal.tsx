@@ -29,9 +29,10 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
   const [customReason, setCustomReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
 
-  const orderCreatedTime = order.createdAt ? new Date(order.createdAt).getTime() : Date.now();
-  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - orderCreatedTime) / (1000 * 60)));
+  const orderCreatedTime = order.createdAt ? new Date(order.createdAt).getTime() : nowMs;
+  const elapsedMinutes = Math.max(0, Math.floor((nowMs - orderCreatedTime) / (1000 * 60)));
   const isFreeWindow = elapsedMinutes <= 120;
 
   const fee = isFreeWindow ? 0 : Math.min(50, order.finalTotal);

@@ -19,6 +19,7 @@ export interface BatchParticipant {
   id: number;
   commitmentCode: string;
   groupPurchaseId: number;
+  productId?: number;
   batchCode?: string;
   displayName: string;
   initials: string;

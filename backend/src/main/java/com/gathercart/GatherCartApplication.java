@@ -4,6 +4,9 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 @SpringBootApplication
 public class GatherCartApplication {
 
@@ -13,7 +16,11 @@ public class GatherCartApplication {
 
     public static void loadDotenv() {
         try {
+            String dir = Files.exists(Path.of(".env"))
+                    ? "."
+                    : (Files.exists(Path.of("backend/.env")) ? "backend" : ".");
             Dotenv dotenv = Dotenv.configure()
+                    .directory(dir)
                     .ignoreIfMissing()
                     .load();
 

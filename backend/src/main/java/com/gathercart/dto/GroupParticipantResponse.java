@@ -17,6 +17,7 @@ public class GroupParticipantResponse {
     private Long id;
     private String commitmentCode;
     private Long groupPurchaseId;
+    private Long productId;
     private String batchCode;
     private String displayName;
     private String initials;
